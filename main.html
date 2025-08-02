@@ -400,7 +400,19 @@
                     const handleOk = () => {
                         const height = parseFloat(newHeightInput.value);
                         if (!height || height <= 0 || height < 100 || height > 250) {
-                            alert('100から250のあいだで　ただしい　しんちょうを　にゅうりょくしてください。');
+                            // alert()の代わりにダイアログ内にエラーメッセージを表示
+                            const errorMsg = document.createElement('p');
+                            errorMsg.className = 'text-red-400 text-sm mt-2';
+                            errorMsg.textContent = '100から250のあいだで　ただしい　しんちょうを　にゅうりょくしてください。';
+                            
+                            // 既存のエラーメッセージを削除
+                            const existingError = heightChangeDialog.querySelector('.text-red-400');
+                            if (existingError) {
+                                existingError.remove();
+                            }
+                            
+                            // 新しいエラーメッセージを追加
+                            newHeightInput.parentNode.appendChild(errorMsg);
                             newHeightInput.focus();
                             return;
                         }
@@ -679,8 +691,7 @@
 
                 } catch (e) {
                     console.error("Save Error Details:", e);
-                    alert(`ほぞんエラー: ${e.message}`);
-                    showFormMessage('ほぞんに　しっぱいしました。', true);
+                    showFormMessage(`ほぞんエラー: ${e.message}`, true);
                 } finally {
                     addWeightBtn.disabled = false;
                     hideLoader();
@@ -710,10 +721,21 @@
                     const encodedData = encodeURIComponent(JSON.stringify(data));
                     script.src = `${GAS_API_URL}?callback=${callbackName}&action=save&data=${encodedData}&t=${Date.now()}`;
                     
-                    script.onerror = () => {
+                    script.onerror = (error) => {
                         document.head.removeChild(script);
                         delete window[callbackName];
-                        reject(new Error('JSONP保存スクリプトの読み込みに失敗しました'));
+                        
+                        // 詳細なエラー情報を収集
+                        const errorInfo = {
+                            type: 'JSONP Load Error',
+                            userAgent: navigator.userAgent,
+                            url: script.src,
+                            timestamp: new Date().toISOString(),
+                            referrer: document.referrer
+                        };
+                        console.error('JSONP Error Details:', errorInfo);
+                        
+                        reject(new Error('JSONP保存スクリプトの読み込みに失敗しました。ネットワークやブラウザの設定を確認してください。'));
                     };
                     
                     document.head.appendChild(script);
@@ -767,7 +789,7 @@
                     });
                 } catch (e) {
                     console.error("Load Error Details:", e);
-                    alert(`よみこみエラー: ${e.message}`);
+                    showFormMessage(`よみこみエラー: ${e.message}`, true);
                 } finally {
                     hideLoader();
                 }
@@ -803,7 +825,7 @@
                 // 削除対象のデータを検索
                 const targetRecord = weightData.find(d => d.date === date);
                 if (!targetRecord) {
-                    alert('きろくが　みつかりません。');
+                    showFormMessage('きろくが　みつかりません。', true);
                     return;
                 }
                 
@@ -818,7 +840,7 @@
                         showFormMessage('きろくを　けしました。', false);
                     } catch (e) {
                         console.error("Delete Error:", e);
-                        alert(`けすときに　エラーが　はっせいしました: ${e.message}`);
+                        showFormMessage(`けすときに　エラーが　はっせいしました: ${e.message}`, true);
                     }
                 }
             };
@@ -838,8 +860,7 @@
                     renderChart(); // グラフも更新
                 } catch (e) {
                     console.error("Height Save Error:", e);
-                    alert(`しんちょうの　ほぞんに　しっぱいしました: ${e.message}`);
-                    showHeightMessage('しんちょうの　ほぞんに　しっぱいしました。', true);
+                    showHeightMessage(`しんちょうの　ほぞんに　しっぱいしました: ${e.message}`, true);
                 } finally {
                     hideLoader();
                 }
@@ -869,7 +890,10 @@
                     script.onerror = () => {
                         document.head.removeChild(script);
                         delete window[callbackName];
-                        reject(new Error('身長保存スクリプトの読み込みに失敗しました'));
+                        
+                        // Googleサイトのサンドボックス環境でJSONPが失敗した場合の対処
+                        console.warn('JSONP failed, this might be due to Google Sites sandbox restrictions');
+                        reject(new Error('せつぞく　エラー: GoogleサイトのSeキュリティせいげんにより　しんちょうの　ほぞんが　せいげんされています。\nちょくせつ　Google Apps Scriptの　URLに　アクセスして　ためしてください。'));
                     };
                     
                     document.head.appendChild(script);
@@ -879,7 +903,7 @@
                         if (window[callbackName]) {
                             document.head.removeChild(script);
                             delete window[callbackName];
-                            reject(new Error('身長保存がタイムアウトしました'));
+                            reject(new Error('しんちょうほぞんが　タイムアウトしました'));
                         }
                     }, 10000);
                 });
@@ -912,8 +936,35 @@
             };
             // ▲▲▲【変更点6】ここまで ▲▲▲
 
+            // 環境診断機能
+            const diagnoseEnvironment = () => {
+                const info = {
+                    userAgent: navigator.userAgent,
+                    cookieEnabled: navigator.cookieEnabled,
+                    language: navigator.language,
+                    platform: navigator.platform,
+                    timestamp: new Date().toISOString(),
+                    url: window.location.href,
+                    referrer: document.referrer,
+                    screenSize: `${screen.width}x${screen.height}`,
+                    viewport: `${window.innerWidth}x${window.innerHeight}`
+                };
+                
+                console.log('Environment Diagnosis:', info);
+                
+                // 診断結果をフォームメッセージに表示（開発時のみ）
+                if (window.location.href.includes('localhost') || window.location.href.includes('file://')) {
+                    showFormMessage(`診断完了: ${info.userAgent.substring(0, 50)}...`, false);
+                }
+                
+                return info;
+            };
+
             // --- 5. 初期化処理とイベントリスナー設定 ---
             const initialize = () => {
+                // 環境診断を実行
+                diagnoseEnvironment();
+                
                 const today = new Date();
                 const yyyy = today.getFullYear();
                 const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -945,7 +996,7 @@
 
                 if (GAS_API_URL.includes('ここにデプロイしたURLを貼り付け')) {
                     hideLoader();
-                    alert('HTMLファイルのなかの「GAS_API_URL」を、Google Apps ScriptのURLに　かきかえてください。');
+                    showFormMessage('HTMLファイルのなかの「GAS_API_URL」を、Google Apps ScriptのURLに　かきかえてください。', true);
                     return;
                 }
 
