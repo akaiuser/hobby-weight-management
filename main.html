@@ -266,14 +266,14 @@
 
         <!-- 記録一覧テーブル -->
         <div class="dq-window">
-            <h3 class="text-lg font-semibold mb-4 text-white">いままでのきろく</h3>
+            <h3 class="text-lg font-semibold mb-4 text-white text-center">いままでのきろく</h3>
             <div class="max-h-96 overflow-y-auto">
-                <table class="w-full text-sm text-left dq-table">
+                <table class="w-full text-sm text-center dq-table">
                     <thead>
                         <tr>
                             <th class="p-2">ひづけ</th>
                             <th class="p-2">たいじゅう (kg)</th>
-                            <th class="p-2 text-right">そうさ</th>
+                            <th class="p-2">そうさ</th>
                         </tr>
                     </thead>
                     <tbody id="historyTableBody">
@@ -644,7 +644,7 @@
                     row.innerHTML = `
                         <td class="p-2">${record.date}</td>
                         <td class="p-2">${Number(record.weight).toFixed(1)} kg</td>
-                        <td class="p-2 text-right">
+                        <td class="p-2">
                             <button class="dq-button text-red-400" data-date="${record.date}">けす</button>
                         </td>
                     `;
