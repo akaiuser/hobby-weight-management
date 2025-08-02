@@ -105,6 +105,31 @@
             <h1 class="text-3xl sm:text-4xl font-bold text-white tracking-wider">たいじゅうのきろく</h1>
         </header>
 
+        <!-- ▼▼▼【変更点1】身長設定とステータス表示エリア ▼▼▼ -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- 身長設定 -->
+            <div class="dq-window">
+                <h2 class="text-xl font-semibold text-white mb-4">せってい</h2>
+                 <div class="flex items-end gap-4">
+                    <div class="flex-grow">
+                        <label for="heightInput" class="block text-sm font-medium text-white mb-1">しんちょう (cm)</label>
+                        <input type="number" id="heightInput" placeholder="160" step="0.1" class="input-field w-full">
+                    </div>
+                    <button id="saveHeightBtn" class="dq-button h-12">▶ ほぞん</button>
+                </div>
+                <p id="heightMessage" class="text-yellow-300 text-sm mt-3 h-5"></p>
+            </div>
+            <!-- ステータス表示 -->
+            <div class="dq-window">
+                <h2 class="text-xl font-semibold text-white mb-4">ステータス</h2>
+                <div id="statusDisplay" class="space-y-2 text-lg">
+                    <p>しんちょうを　せっていしてください。</p>
+                </div>
+            </div>
+        </div>
+        <!-- ▲▲▲【変更点1】ここまで ▲▲▲ -->
+
+
         <!-- 体重入力フォーム -->
         <div class="dq-window">
             <h2 class="text-xl sm:text-2xl font-semibold text-white mb-4">きょうのたいじゅう</h2>
@@ -115,7 +140,7 @@
                 </div>
                 <div>
                     <label for="weightInput" class="block text-sm font-medium text-white mb-1">たいじゅう (kg)</label>
-                    <input type="number" id="weightInput" placeholder="75.5" step="0.1" class="input-field w-full">
+                    <input type="number" id="weightInput" placeholder="60" step="0.1" class="input-field w-full">
                 </div>
                 <button id="addWeightBtn" class="dq-button h-12 text-lg">▶ きろくする</button>
             </div>
@@ -151,7 +176,8 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- 1. 定数とDOM要素の定義 ---
-            const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzail6OJ2dfGuLElPuL-hH0I43yWBGsWbdXSZWXmruoC3aoPnMvI5LgO_ZnkUZhJaBq/exec';
+            const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwryjM4S-XDCzlTfK5O6v0eEXQwLgPhhDMlLP3MCB1K2RopL-IdhfpVLfSbWWdWvcQ/exec'; // ★ご自身のURLに書き換えてください
+            const HEIGHT_STORAGE_KEY = 'userHeight'; // 身長をブラウザに保存するキー
 
             const weightDateEl = document.getElementById('weightDate');
             const weightInputEl = document.getElementById('weightInput');
@@ -162,8 +188,16 @@
             const loadingOverlay = document.getElementById('loadingOverlay');
             const loadingMessage = document.getElementById('loadingMessage');
 
+            // ▼▼▼【変更点2】身長・ステータス関連のDOM要素を追加 ▼▼▼
+            const heightInputEl = document.getElementById('heightInput');
+            const saveHeightBtn = document.getElementById('saveHeightBtn');
+            const heightMessage = document.getElementById('heightMessage');
+            const statusDisplay = document.getElementById('statusDisplay');
+            // ▲▲▲【変更点2】ここまで ▲▲▲
+
             let weightData = [];
             let weightChart;
+            let userHeight = 0; // 身長を保持する変数
 
             // --- 2. ローダーとメッセージ表示の関数 ---
             const showLoader = (message) => {
@@ -178,6 +212,43 @@
                 formMessage.style.color = isError ? '#ff7f7f' : '#FFD700';
                 setTimeout(() => formMessage.textContent = '', 3000);
             };
+            // ▼▼▼【変更点3】身長設定用のメッセージ表示関数を追加 ▼▼▼
+            const showHeightMessage = (message) => {
+                heightMessage.textContent = message;
+                setTimeout(() => heightMessage.textContent = '', 3000);
+            };
+            // ▲▲▲【変更点3】ここまで ▲▲▲
+
+            // ▼▼▼【変更点4】ステータス表示を更新する関数を追加 ▼▼▼
+            const updateStatusDisplay = () => {
+                if (!userHeight || userHeight <= 0) {
+                    statusDisplay.innerHTML = '<p>しんちょうを　せっていしてください。</p>';
+                    return;
+                }
+                
+                const latestData = [...weightData].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+                if (!latestData) {
+                    statusDisplay.innerHTML = '<p>たいじゅうを　きろくしてください。</p>';
+                    return;
+                }
+
+                const heightInMeters = userHeight / 100;
+                const weight = latestData.weight;
+
+                const bmi = weight / (heightInMeters * heightInMeters);
+                const standardWeight = (heightInMeters * heightInMeters) * 22;
+                const diff = weight - standardWeight;
+
+                const diffSign = diff >= 0 ? '+' : '';
+                const diffColor = diff > 0 ? 'text-red-400' : 'text-green-400';
+
+                statusDisplay.innerHTML = `
+                    <p>BMI: ${bmi.toFixed(2)}</p>
+                    <p>ひょうじゅんたいじゅう: ${standardWeight.toFixed(1)} kg</p>
+                    <p>さぶん: <span class="${diffColor}">${diffSign}${diff.toFixed(1)} kg</span></p>
+                `;
+            };
+            // ▲▲▲【変更点4】ここまで ▲▲▲
 
             // --- 3. グラフとテーブルの描画関数 ---
             const renderChart = () => {
@@ -269,59 +340,18 @@
                 showLoader('データをほぞんちゅう...');
                 addWeightBtn.disabled = true;
                 try {
-                    console.log('Sending data to GAS:', data);
+                    console.log('Saving data via JSONP:', data);
                     
-                    // URLSearchParamsを使用してform-urlencodedで送信
-                    const formData = new URLSearchParams();
-                    formData.append('data', JSON.stringify(data));
+                    // JSONPで保存処理を実行
+                    await saveDataWithJSONP(data);
                     
-                    const response = await fetch(GAS_API_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded'
-                        },
-                        body: formData
-                    });
-
-                    console.log('Response status:', response.status);
-
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error('Response error text:', errorText);
-                        throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
-                    }
-
-                    const responseText = await response.text();
-                    console.log('Response text:', responseText);
-                    
-                    let result;
-                    try {
-                        result = JSON.parse(responseText);
-                    } catch (parseError) {
-                        console.error('JSON parse error:', parseError);
-                        throw new Error('サーバーからの応答がJSON形式ではありません');
-                    }
-                    
-                    console.log('Parsed result:', result);
-
-                    if (result.status === 'success') {
-                        await loadData();
-                        showFormMessage('データを　きろくしました！', false);
-                        weightInputEl.value = '';
-                    } else {
-                        throw new Error(result.message || 'スクリプトの実行に失敗しました。');
-                    }
+                    // 保存後にデータを再読み込み
+                    await loadData();
+                    showFormMessage('データを　きろくしました！', false);
 
                 } catch (e) {
                     console.error("Save Error Details:", e);
-                    
-                    if (e.name === 'TypeError' && e.message.includes('fetch')) {
-                        alert(`ネットワークエラー: GASへの接続に失敗しました。\n\n詳細: ${e.message}\n\nGASのURLとデプロイ設定を確認してください。`);
-                    } else if (e.message.includes('CORS')) {
-                        alert(`CORSエラー: ${e.message}\n\nローカルファイルから直接開くとCORSエラーが発生します。Live Serverを使用してください。`);
-                    } else {
-                        alert(`ほぞんエラー: ${e.message}`);
-                    }
+                    alert(`ほぞんエラー: ${e.message}`);
                     showFormMessage('ほぞんに　しっぱいしました。', true);
                 } finally {
                     addWeightBtn.disabled = false;
@@ -329,50 +359,33 @@
                 }
             };
 
-            const loadData = async () => {
-                showLoader('データをよみこみちゅう...');
-                try {
-                    console.log('Loading data from GAS using JSONP...');
-                    
-                    // 古いGASではCORSヘッダーが設定できないため、JSONPのみを使用
-                    await loadDataWithJSONP();
-                    
-                } catch (e) {
-                    console.error("Load Error Details:", e);
-                    alert(`よみこみエラー: ${e.message}\n\nGASが古いバージョンのため、JSONPで通信します。`);
-                } finally {
-                    hideLoader();
-                }
-            };
-
-            // JSONP関数
-            const loadDataWithJSONP = () => {
+            // JSONP保存関数
+            const saveDataWithJSONP = (data) => {
                 return new Promise((resolve, reject) => {
                     const script = document.createElement('script');
-                    const callbackName = 'jsonp_callback_' + Date.now();
+                    const callbackName = 'save_callback_' + Date.now();
                     
-                    window[callbackName] = (data) => {
+                    window[callbackName] = (response) => {
                         document.head.removeChild(script);
                         delete window[callbackName];
                         
-                        console.log('JSONP response received:', data);
+                        console.log('Save JSONP response received:', response);
                         
-                        if (data.status === 'success') {
-                            weightData = data.data.map(d => ({...d, weight: parseFloat(d.weight)}));
-                            renderChart();
-                            renderTable();
-                            console.log('Data loaded via JSONP:', weightData.length, 'records');
-                            resolve();
+                        if (response.status === 'success') {
+                            resolve(response);
                         } else {
-                            reject(new Error(data.message || 'JSONP読み込みに失敗しました'));
+                            reject(new Error(response.message || 'JSONP保存に失敗しました'));
                         }
                     };
                     
-                    script.src = `${GAS_API_URL}?callback=${callbackName}&t=${Date.now()}`;
+                    // データをURLエンコードしてクエリパラメータとして送信
+                    const encodedData = encodeURIComponent(JSON.stringify(data));
+                    script.src = `${GAS_API_URL}?callback=${callbackName}&action=save&data=${encodedData}&t=${Date.now()}`;
+                    
                     script.onerror = () => {
                         document.head.removeChild(script);
                         delete window[callbackName];
-                        reject(new Error('JSONPスクリプトの読み込みに失敗しました'));
+                        reject(new Error('JSONP保存スクリプトの読み込みに失敗しました'));
                     };
                     
                     document.head.appendChild(script);
@@ -382,10 +395,45 @@
                         if (window[callbackName]) {
                             document.head.removeChild(script);
                             delete window[callbackName];
-                            reject(new Error('JSONPタイムアウトしました'));
+                            reject(new Error('JSONP保存がタイムアウトしました'));
                         }
                     }, 10000);
                 });
+            };
+
+            const loadData = async () => {
+                showLoader('データをよみこみちゅう...');
+                try {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        const callbackName = 'jsonp_callback_' + Date.now();
+                        
+                        window[callbackName] = (data) => {
+                            document.head.removeChild(script);
+                            delete window[callbackName];
+                            
+                            if (data.status === 'success') {
+                                weightData = data.data.map(d => ({...d, weight: parseFloat(d.weight)}));
+                                renderChart();
+                                renderTable();
+                                updateStatusDisplay(); // ▼▼▼【変更点5】データ読み込み後ステータスを更新 ▼▼▼
+                                resolve();
+                            } else {
+                                reject(new Error(data.message || 'JSONP読み込みに失敗しました'));
+                            }
+                        };
+                        
+                        script.src = `${GAS_API_URL}?callback=${callbackName}&t=${Date.now()}`;
+                        script.onerror = () => reject(new Error('JSONPスクリプトの読み込みに失敗しました'));
+                        document.head.appendChild(script);
+                        setTimeout(() => reject(new Error('JSONPタイムアウトしました')), 10000);
+                    });
+                } catch (e) {
+                    console.error("Load Error Details:", e);
+                    alert(`よみこみエラー: ${e.message}`);
+                } finally {
+                    hideLoader();
+                }
             };
 
             const handleAdd = () => {
@@ -415,11 +463,35 @@
             };
 
             const handleDelete = (date) => {
-                if (window.confirm(`${date} のきろくを　けしてしまいますが　よろしいですか？`)) {
+                // window.confirm は Googleサイトの埋め込みでは動作しないことがあるため、簡易的な確認に変更
+                const confirmed = confirm(`${date} のきろくを　けしてしまいますが　よろしいですか？`);
+                if (confirmed) {
                     const newData = weightData.filter(d => d.date !== date);
                     saveData(newData);
                 }
             };
+
+            // ▼▼▼【変更点6】身長を保存・読み込みする関数を追加 ▼▼▼
+            const saveHeight = () => {
+                const height = parseFloat(heightInputEl.value);
+                if (height && height > 0) {
+                    localStorage.setItem(HEIGHT_STORAGE_KEY, height);
+                    userHeight = height;
+                    showHeightMessage('しんちょうを　ほぞんしました！');
+                    updateStatusDisplay(); // 保存後すぐにステータスを更新
+                } else {
+                    showHeightMessage('ただしい　しんちょうを　にゅうりょくしてください。');
+                }
+            };
+
+            const loadHeight = () => {
+                const savedHeight = localStorage.getItem(HEIGHT_STORAGE_KEY);
+                if (savedHeight) {
+                    userHeight = parseFloat(savedHeight);
+                    heightInputEl.value = userHeight;
+                }
+            };
+            // ▲▲▲【変更点6】ここまで ▲▲▲
 
             // --- 5. 初期化処理とイベントリスナー設定 ---
             const initialize = () => {
@@ -431,12 +503,15 @@
 
                 addWeightBtn.addEventListener('click', handleAdd);
                 weightInputEl.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        handleAdd();
-                    }
+                    if (e.key === 'Enter') handleAdd();
                 });
 
-                if (GAS_API_URL === 'ここにデプロイしたURLを貼り付け') {
+                // ▼▼▼【変更点7】身長関連の処理を追加 ▼▼▼
+                loadHeight();
+                saveHeightBtn.addEventListener('click', saveHeight);
+                // ▲▲▲【変更点7】ここまで ▲▲▲
+
+                if (GAS_API_URL.includes('ここにデプロイしたURLを貼り付け')) {
                     hideLoader();
                     alert('HTMLファイルのなかの「GAS_API_URL」を、Google Apps ScriptのURLに　かきかえてください。');
                     return;
