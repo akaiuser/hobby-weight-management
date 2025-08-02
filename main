@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>たいじゅうかんり</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+    <style>
+        /* --- ドラクエ風デザイン設定 --- */
+        body {
+            background-color: #000000;
+            font-family: 'DotGothic16', sans-serif;
+            color: #FFFFFF;
+            -webkit-font-smoothing: none; /* フォントのアンチエイリアスを無効化 */
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .dq-window {
+            background-color: #00005E;
+            border: 4px solid #FFFFFF;
+            box-shadow: 0 0 0 4px #636363;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+        .dq-button {
+            background-color: transparent;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            text-align: left;
+        }
+        .dq-button:hover::before, .dq-button:focus::before {
+            content: '▶';
+            color: #FFD700;
+            position: absolute;
+            left: -0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .dq-button:disabled {
+            color: #9E9E9E;
+            cursor: not-allowed;
+        }
+        .dq-button:disabled:hover::before {
+            content: '';
+        }
+
+        .input-field {
+            background-color: #00003B;
+            border: 2px solid #FFFFFF;
+            color: #FFFFFF;
+            padding: 0.75rem;
+            border-radius: 4px;
+        }
+        .input-field:focus {
+            outline: 2px solid #FFD700;
+        }
+        .input-field::placeholder {
+            color: #A9A9A9;
+        }
+        /* スピナーのスタイル */
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #FFFFFF;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* テーブルのスタイル */
+        .dq-table th, .dq-table td {
+            border: 2px solid #FFFFFF;
+            padding: 8px;
+        }
+        .dq-table th {
+            background-color: #00003B;
+        }
+    </style>
+</head>
+<body class="antialiased p-4">
+
+    <!-- ローディング画面 -->
+    <div id="loadingOverlay" class="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center">
+        <div class="flex flex-col items-center">
+            <div class="spinner"></div>
+            <p id="loadingMessage" class="text-white text-lg mt-4">データをよみこみちゅう...</p>
+        </div>
+    </div>
+
+    <!-- メインコンテンツ -->
+    <div class="container mx-auto max-w-4xl space-y-6">
+        <header class="text-center py-4">
+            <h1 class="text-3xl sm:text-4xl font-bold text-white tracking-wider">たいじゅうのきろく</h1>
+        </header>
+
+        <!-- 体重入力フォーム -->
+        <div class="dq-window">
+            <h2 class="text-xl sm:text-2xl font-semibold text-white mb-4">きょうのたいじゅう</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
+                    <label for="weightDate" class="block text-sm font-medium text-white mb-1">ひづけ</label>
+                    <input type="date" id="weightDate" class="input-field w-full">
+                </div>
+                <div>
+                    <label for="weightInput" class="block text-sm font-medium text-white mb-1">たいじゅう (kg)</label>
+                    <input type="number" id="weightInput" placeholder="75.5" step="0.1" class="input-field w-full">
+                </div>
+                <button id="addWeightBtn" class="dq-button h-12 text-lg">▶ きろくする</button>
+            </div>
+            <p id="formMessage" class="text-yellow-300 text-sm mt-3 h-5"></p>
+        </div>
+
+        <!-- グラフ表示エリア -->
+        <div class="dq-window">
+            <canvas id="weightChart"></canvas>
+        </div>
+
+        <!-- 記録一覧テーブル -->
+        <div class="dq-window">
+            <h3 class="text-lg font-semibold mb-4 text-white">いままでのきろく</h3>
+            <div class="max-h-96 overflow-y-auto">
+                <table class="w-full text-sm text-left dq-table">
+                    <thead>
+                        <tr>
+                            <th class="p-2">ひづけ</th>
+                            <th class="p-2">たいじゅう (kg)</th>
+                            <th class="p-2 text-right">そうさ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <!-- ここに記録が動的に追加される -->
+                        <tr><td colspan="3" class="text-center p-8">まだ　きろくが　ありません。</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- 1. 定数とDOM要素の定義 ---
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            // ★ Google Apps Scriptをデプロイして取得したURLをここに貼り付けてください ★
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            const GAS_API_URL = 'ここにデプロイしたURLを貼り付け';
+
+            const weightDateEl = document.getElementById('weightDate');
+            const weightInputEl = document.getElementById('weightInput');
+            const addWeightBtn = document.getElementById('addWeightBtn');
+            const historyTableBody = document.getElementById('historyTableBody');
+            const chartCanvas = document.getElementById('weightChart');
+            const formMessage = document.getElementById('formMessage');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const loadingMessage = document.getElementById('loadingMessage');
+
+            let weightData = [];
+            let weightChart;
+
+            // --- 2. ローダーとメッセージ表示の関数 ---
+            const showLoader = (message) => {
+                loadingMessage.textContent = message;
+                loadingOverlay.style.display = 'flex';
+            };
+            const hideLoader = () => {
+                loadingOverlay.style.display = 'none';
+            };
+            const showFormMessage = (message, isError = false) => {
+                formMessage.textContent = message;
+                formMessage.style.color = isError ? '#ff7f7f' : '#FFD700';
+                setTimeout(() => formMessage.textContent = '', 3000);
+            };
+
+            // --- 3. グラフとテーブルの描画関数 ---
+            const renderChart = () => {
+                if (weightChart) {
+                    weightChart.destroy();
+                }
+                if (!chartCanvas) return;
+
+                const sortedData = [...weightData].sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                // Chart.jsのデフォルトフォント設定
+                Chart.defaults.font.family = "'DotGothic16', sans-serif";
+                Chart.defaults.color = '#FFFFFF';
+
+                weightChart = new Chart(chartCanvas, {
+                    type: 'line',
+                    data: {
+                        labels: sortedData.map(d => d.date),
+                        datasets: [{
+                            label: 'たいじゅう (kg)',
+                            data: sortedData.map(d => d.weight),
+                            borderColor: '#FFD700',
+                            backgroundColor: 'rgba(255, 215, 0, 0.2)',
+                            fill: true,
+                            tension: 0.1,
+                            pointBackgroundColor: '#FFD700',
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'day',
+                                    tooltipFormat: 'yyyy/MM/dd',
+                                    displayFormats: {
+                                        day: 'MM/dd'
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.2)'
+                                },
+                                ticks: { color: '#FFFFFF' }
+                            },
+                            y: {
+                                beginAtZero: false,
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.2)'
+                                },
+                                ticks: { color: '#FFFFFF' }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#FFFFFF'
+                                }
+                            }
+                        }
+                    }
+                });
+            };
+
+            const renderTable = () => {
+                historyTableBody.innerHTML = '';
+                if (weightData.length === 0) {
+                    historyTableBody.innerHTML = '<tr><td colspan="3" class="text-center p-8">まだ　きろくが　ありません。</td></tr>';
+                    return;
+                }
+
+                const sortedData = [...weightData].sort((a, b) => new Date(b.date) - new Date(a.date));
+                sortedData.forEach(record => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-white hover:bg-blue-900';
+                    row.innerHTML = `
+                        <td class="p-2">${record.date}</td>
+                        <td class="p-2">${Number(record.weight).toFixed(1)} kg</td>
+                        <td class="p-2 text-right">
+                            <button class="dq-button text-red-400" data-date="${record.date}">けす</button>
+                        </td>
+                    `;
+                    historyTableBody.appendChild(row);
+                });
+
+                // 削除ボタンにイベントリスナーを再設定
+                document.querySelectorAll('#historyTableBody button').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        handleDelete(e.target.dataset.date);
+                    });
+                });
+            };
+
+            // --- 4. データ操作 (CRUD) ---
+            const loadData = async () => {
+                showLoader('データをよみこみちゅう...');
+                try {
+                    const response = await fetch(GAS_API_URL);
+                    if (!response.ok) throw new Error('つうしんに　しっぱいしました。');
+                    
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        weightData = result.data.map(d => ({...d, weight: parseFloat(d.weight)}));
+                        renderChart();
+                        renderTable();
+                    } else {
+                        throw new Error(result.message || 'データのよみこみに　しっぱいしました。');
+                    }
+                } catch (e) {
+                    alert(`エラー: ${e.message}`);
+                } finally {
+                    hideLoader();
+                }
+            };
+
+            const saveData = async (data) => {
+                showLoader('データをほぞんちゅう...');
+                addWeightBtn.disabled = true;
+                try {
+                    const response = await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors', // doPostを呼び出すための設定
+                        body: JSON.stringify({ data: data }),
+                        headers: { 'Content-Type': 'application/json' },
+                    });
+                    // no-corsモードではレスポンスは確認できないが、GAS側で処理は実行される
+                    // そのため、成功したと仮定してUIを更新する
+                    weightData = data;
+                    renderChart();
+                    renderTable();
+                    showFormMessage('データを　きろくしました！', false);
+
+                } catch (e) {
+                    alert(`ほぞんエラー: ${e.message}`);
+                    showFormMessage('ほぞんに　しっぱいしました。', true);
+                } finally {
+                    hideLoader();
+                    addWeightBtn.disabled = false;
+                }
+            };
+
+            const handleAdd = () => {
+                const date = weightDateEl.value;
+                const weight = weightInputEl.value;
+
+                if (!date || !weight) {
+                    showFormMessage('ひづけと　たいじゅうを　にゅうりょくしてください。', true);
+                    return;
+                }
+                if (weight <= 0) {
+                    showFormMessage('たいじゅうは　ただしいあたいを　いれてください。', true);
+                    return;
+                }
+
+                const newData = [...weightData];
+                const existingIndex = newData.findIndex(d => d.date === date);
+                
+                if (existingIndex > -1) {
+                    // 同じ日付のデータがあれば上書き
+                    newData[existingIndex].weight = parseFloat(weight);
+                } else {
+                    // なければ追加
+                    newData.push({ date, weight: parseFloat(weight) });
+                }
+                
+                saveData(newData);
+                weightInputEl.value = '';
+            };
+
+            const handleDelete = (date) => {
+                if (window.confirm(`${date} のきろくを　けしてしまいますが　よろしいですか？`)) {
+                    const newData = weightData.filter(d => d.date !== date);
+                    saveData(newData);
+                }
+            };
+
+
+            // --- 5. 初期化処理とイベントリスナー設定 ---
+            const initialize = () => {
+                // 日付入力の初期値を今日に設定
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                weightDateEl.value = `${yyyy}-${mm}-${dd}`;
+
+                addWeightBtn.addEventListener('click', handleAdd);
+                weightInputEl.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        handleAdd();
+                    }
+                });
+
+                // GAS_API_URLが初期値のままなら警告
+                if (GAS_API_URL === 'ここにデプロイしたURLを貼り付け') {
+                    hideLoader();
+                    alert('HTMLファイルのなかの「GAS_API_URL」を、Google Apps ScriptのURLに　かきかえてください。');
+                    return;
+                }
+
+                loadData();
+            };
+
+            initialize();
+        });
+    </script>
+</body>
+</html>
