@@ -179,6 +179,28 @@
         </div>
     </div>
 
+    <!-- 身長変更ダイアログ -->
+    <div id="heightChangeDialog" class="custom-dialog" style="display: none;">
+        <div class="dialog-content">
+            <h3 class="text-xl font-semibold text-white mb-4">しんちょうを　へんこう</h3>
+            <div class="text-white mb-4">
+                <label for="newHeightInput" class="block text-sm font-medium text-white mb-2">あたらしい　しんちょう (cm)</label>
+                <input type="number" id="newHeightInput" placeholder="160" step="0.1" class="input-field w-full text-center text-lg" min="100" max="250">
+            </div>
+            <!-- 注意書きエリア -->
+            <div class="text-yellow-300 text-sm mb-4 p-3 border border-yellow-300 rounded">
+                <p class="mb-1">⚠️ しんちょうを　へんこうすると：</p>
+                <p>• BMI けいさんが　かわります</p>
+                <p>• ひょうじゅんたいじゅうが　かわります</p>
+                <p>• グラフの　ひょうじゅんラインが　かわります</p>
+            </div>
+            <div class="dialog-buttons">
+                <button id="heightChangeOk" class="dialog-btn confirm">へんこうする</button>
+                <button id="heightChangeCancel" class="dialog-btn cancel">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
     <!-- メインコンテンツ -->
     <div class="container mx-auto max-w-4xl space-y-6">
         <header class="text-center py-4">
@@ -192,10 +214,12 @@
                 <h2 class="text-xl font-semibold text-white mb-4">せってい</h2>
                  <div class="flex items-end gap-4">
                     <div class="flex-grow">
-                        <label for="heightInput" class="block text-sm font-medium text-white mb-1">しんちょう (cm)</label>
-                        <input type="number" id="heightInput" placeholder="160" step="0.1" class="input-field w-full">
+                        <label for="heightDisplay" class="block text-sm font-medium text-white mb-1">しんちょう (cm)</label>
+                        <div id="heightDisplay" class="input-field w-full text-center text-lg bg-gray-700 cursor-default">
+                            まだ　せっていされていません
+                        </div>
                     </div>
-                    <button id="saveHeightBtn" class="dq-button h-12">▶ ほぞん</button>
+                    <button id="changeHeightBtn" class="dq-button h-12">▶ へんこう</button>
                 </div>
                 <p id="heightMessage" class="text-yellow-300 text-sm mt-3 h-5"></p>
             </div>
@@ -277,10 +301,16 @@
             const loadingMessage = document.getElementById('loadingMessage');
 
             // ▼▼▼【変更点2】身長・ステータス関連のDOM要素を追加 ▼▼▼
-            const heightInputEl = document.getElementById('heightInput');
-            const saveHeightBtn = document.getElementById('saveHeightBtn');
+            const heightDisplay = document.getElementById('heightDisplay');
+            const changeHeightBtn = document.getElementById('changeHeightBtn');
             const heightMessage = document.getElementById('heightMessage');
             const statusDisplay = document.getElementById('statusDisplay');
+            
+            // 身長変更ダイアログ関連のDOM要素
+            const heightChangeDialog = document.getElementById('heightChangeDialog');
+            const newHeightInput = document.getElementById('newHeightInput');
+            const heightChangeOk = document.getElementById('heightChangeOk');
+            const heightChangeCancel = document.getElementById('heightChangeCancel');
             // ▲▲▲【変更点2】ここまで ▲▲▲
 
             // 確認ダイアログ関連のDOM要素
@@ -353,6 +383,58 @@
                         }
                     };
                     document.addEventListener('keydown', handleEscape);
+                });
+            };
+
+            // 身長変更ダイアログを表示する関数
+            const showHeightInputDialog = () => {
+                return new Promise((resolve) => {
+                    // 現在の身長があれば初期値として設定
+                    newHeightInput.value = userHeight > 0 ? userHeight : '';
+                    newHeightInput.focus();
+                    
+                    // ダイアログを表示
+                    heightChangeDialog.style.display = 'flex';
+                    
+                    // イベントリスナーを設定
+                    const handleOk = () => {
+                        const height = parseFloat(newHeightInput.value);
+                        if (!height || height <= 0 || height < 100 || height > 250) {
+                            alert('100から250のあいだで　ただしい　しんちょうを　にゅうりょくしてください。');
+                            newHeightInput.focus();
+                            return;
+                        }
+                        
+                        // 確認ダイアログは表示せず、直接保存処理を実行
+                        heightChangeDialog.style.display = 'none';
+                        cleanup();
+                        resolve(height);
+                    };
+                    
+                    const handleCancel = () => {
+                        heightChangeDialog.style.display = 'none';
+                        cleanup();
+                        resolve(null);
+                    };
+                    
+                    const cleanup = () => {
+                        heightChangeOk.removeEventListener('click', handleOk);
+                        heightChangeCancel.removeEventListener('click', handleCancel);
+                        newHeightInput.removeEventListener('keydown', handleEnter);
+                    };
+                    
+                    heightChangeOk.addEventListener('click', handleOk);
+                    heightChangeCancel.addEventListener('click', handleCancel);
+                    
+                    // Enterキーで確認
+                    const handleEnter = (e) => {
+                        if (e.key === 'Enter') {
+                            handleOk();
+                        } else if (e.key === 'Escape') {
+                            handleCancel();
+                        }
+                    };
+                    newHeightInput.addEventListener('keydown', handleEnter);
                 });
             };
 
@@ -733,23 +815,42 @@
             };
 
             // ▼▼▼【変更点6】身長を保存・読み込みする関数を追加 ▼▼▼
-            const saveHeight = () => {
-                const height = parseFloat(heightInputEl.value);
-                if (height && height > 0) {
-                    localStorage.setItem(HEIGHT_STORAGE_KEY, height);
-                    userHeight = height;
-                    showHeightMessage('しんちょうを　ほぞんしました！');
-                    updateStatusDisplay(); // 保存後すぐにステータスを更新
-                } else {
-                    showHeightMessage('ただしい　しんちょうを　にゅうりょくしてください。');
-                }
+            const saveHeight = (height) => {
+                localStorage.setItem(HEIGHT_STORAGE_KEY, height);
+                userHeight = height;
+                updateHeightDisplay();
+                showHeightMessage('しんちょうを　へんこうしました！');
+                updateStatusDisplay();
+                renderChart(); // グラフも更新
             };
 
             const loadHeight = () => {
                 const savedHeight = localStorage.getItem(HEIGHT_STORAGE_KEY);
                 if (savedHeight) {
                     userHeight = parseFloat(savedHeight);
-                    heightInputEl.value = userHeight;
+                    updateHeightDisplay();
+                } else {
+                    userHeight = 0;
+                    updateHeightDisplay();
+                }
+            };
+
+            // 身長表示を更新
+            const updateHeightDisplay = () => {
+                if (userHeight > 0) {
+                    heightDisplay.textContent = `${userHeight.toFixed(1)} cm`;
+                    heightDisplay.className = 'input-field w-full text-center text-lg bg-gray-700 cursor-default';
+                } else {
+                    heightDisplay.textContent = 'まだ　せっていされていません';
+                    heightDisplay.className = 'input-field w-full text-center text-lg bg-gray-700 cursor-default text-gray-400';
+                }
+            };
+
+            // 身長変更ボタンのハンドラー
+            const handleHeightChange = async () => {
+                const newHeight = await showHeightInputDialog();
+                if (newHeight !== null) {
+                    saveHeight(newHeight);
                 }
             };
             // ▲▲▲【変更点6】ここまで ▲▲▲
@@ -769,7 +870,7 @@
 
                 // ▼▼▼【変更点7】身長関連の処理を追加 ▼▼▼
                 loadHeight();
-                saveHeightBtn.addEventListener('click', saveHeight);
+                changeHeightBtn.addEventListener('click', handleHeightChange);
                 // ▲▲▲【変更点7】ここまで ▲▲▲
 
                 // 期間選択ボタンのイベントリスナー
