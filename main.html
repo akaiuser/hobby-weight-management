@@ -329,70 +329,20 @@
             const loadData = async () => {
                 showLoader('データをよみこみちゅう...');
                 try {
-                    console.log('Loading data from GAS...');
+                    console.log('Loading data from GAS using JSONP...');
                     
-                    // JSONP風のアプローチを試す（最後の手段）
-                    const timestamp = Date.now();
-                    const url = `${GAS_API_URL}?callback=handleData&t=${timestamp}`;
-                    
-                    // 通常のfetchを試す
-                    try {
-                        const response = await fetch(GAS_API_URL + '?t=' + timestamp, {
-                            method: 'GET',
-                            mode: 'cors',
-                            credentials: 'omit'
-                        });
-                        
-                        console.log('Load response status:', response.status);
-                        console.log('Load response headers:', Object.fromEntries(response.headers.entries()));
-                        
-                        if (!response.ok) {
-                            throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
-                        }
-                        
-                        const responseText = await response.text();
-                        console.log('Load response text:', responseText);
-                        
-                        let result;
-                        try {
-                            result = JSON.parse(responseText);
-                        } catch (parseError) {
-                            console.error('Load JSON parse error:', parseError);
-                            throw new Error('サーバーからの応答がJSON形式ではありません: ' + responseText);
-                        }
-                        
-                        console.log('Load parsed result:', result);
-                        
-                        if (result.status === 'success') {
-                            weightData = result.data.map(d => ({...d, weight: parseFloat(d.weight)}));
-                            renderChart();
-                            renderTable();
-                            console.log('Data loaded successfully:', weightData.length, 'records');
-                            return; // 成功した場合はここで終了
-                        } else {
-                            throw new Error(result.message || 'データのよみこみに　しっぱいしました。');
-                        }
-                    } catch (fetchError) {
-                        console.error('Fetch failed:', fetchError);
-                        
-                        // フォールバック: script要素を使用したJSONPアプローチ
-                        console.log('Trying JSONP fallback...');
-                        await loadDataWithJSONP();
-                    }
+                    // 古いGASではCORSヘッダーが設定できないため、JSONPのみを使用
+                    await loadDataWithJSONP();
                     
                 } catch (e) {
                     console.error("Load Error Details:", e);
-                    if (e.message.includes('CORS') || e.message.includes('fetch')) {
-                        alert(`つうしんエラー: CORSの問題が発生しています。\n\nGASを再デプロイして、新しいURLに更新してください。\n\n詳細: ${e.message}`);
-                    } else {
-                        alert(`よみこみエラー: ${e.message}`);
-                    }
+                    alert(`よみこみエラー: ${e.message}\n\nGASが古いバージョンのため、JSONPで通信します。`);
                 } finally {
                     hideLoader();
                 }
             };
 
-            // JSONPフォールバック関数
+            // JSONP関数
             const loadDataWithJSONP = () => {
                 return new Promise((resolve, reject) => {
                     const script = document.createElement('script');
@@ -401,6 +351,8 @@
                     window[callbackName] = (data) => {
                         document.head.removeChild(script);
                         delete window[callbackName];
+                        
+                        console.log('JSONP response received:', data);
                         
                         if (data.status === 'success') {
                             weightData = data.data.map(d => ({...d, weight: parseFloat(d.weight)}));
@@ -421,6 +373,15 @@
                     };
                     
                     document.head.appendChild(script);
+                    
+                    // タイムアウト設定
+                    setTimeout(() => {
+                        if (window[callbackName]) {
+                            document.head.removeChild(script);
+                            delete window[callbackName];
+                            reject(new Error('JSONPタイムアウトしました'));
+                        }
+                    }, 10000);
                 });
             };
 

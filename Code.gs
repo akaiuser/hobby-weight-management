@@ -1,5 +1,5 @@
 /**
- * 体重管理アプリのバックエンド - 最大互換性対応版
+ * 体重管理アプリのバックエンド - 最古互換性対応版
  */
 
 /**
@@ -8,13 +8,9 @@
 function doOptions(e) {
   Logger.log('OPTIONS request received');
   
-  var output = ContentService.createTextOutput('');
-  output.setMimeType(ContentService.MimeType.TEXT);
-  output.setHeader('Access-Control-Allow-Origin', '*');
-  output.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  output.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  output.setHeader('Access-Control-Max-Age', '3600');
-  return output;
+  return ContentService
+    .createTextOutput('')
+    .setMimeType(ContentService.MimeType.TEXT);
 }
 
 /**
@@ -46,21 +42,15 @@ function doGet(e) {
     var callback = params.callback;
     if (callback) {
       var jsonpResponse = callback + '(' + JSON.stringify(response) + ');';
-      var output = ContentService.createTextOutput(jsonpResponse);
-      output.setMimeType(ContentService.MimeType.JAVASCRIPT);
-      output.setHeader('Access-Control-Allow-Origin', '*');
-      output.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      output.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-      return output;
+      return ContentService
+        .createTextOutput(jsonpResponse)
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
     }
     
     // 通常のJSONレスポンス
-    var output = ContentService.createTextOutput(JSON.stringify(response));
-    output.setMimeType(ContentService.MimeType.JSON);
-    output.setHeader('Access-Control-Allow-Origin', '*');
-    output.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    output.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    return output;
+    return ContentService
+      .createTextOutput(JSON.stringify(response))
+      .setMimeType(ContentService.MimeType.JSON);
       
   } catch (error) {
     Logger.log('GET Error: ' + error.toString());
@@ -72,10 +62,9 @@ function doGet(e) {
       timestamp: new Date().toISOString()
     };
     
-    var output = ContentService.createTextOutput(JSON.stringify(errorResponse));
-    output.setMimeType(ContentService.MimeType.JSON);
-    output.setHeader('Access-Control-Allow-Origin', '*');
-    return output;
+    return ContentService
+      .createTextOutput(JSON.stringify(errorResponse))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
@@ -138,12 +127,9 @@ function doPost(e) {
       timestamp: new Date().toISOString()
     };
     
-    var output = ContentService.createTextOutput(JSON.stringify(response));
-    output.setMimeType(ContentService.MimeType.JSON);
-    output.setHeader('Access-Control-Allow-Origin', '*');
-    output.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    output.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    return output;
+    return ContentService
+      .createTextOutput(JSON.stringify(response))
+      .setMimeType(ContentService.MimeType.JSON);
       
   } catch (error) {
     Logger.log('POST Error: ' + error.toString());
@@ -154,9 +140,8 @@ function doPost(e) {
       timestamp: new Date().toISOString()
     };
     
-    var output = ContentService.createTextOutput(JSON.stringify(errorResponse));
-    output.setMimeType(ContentService.MimeType.JSON);
-    output.setHeader('Access-Control-Allow-Origin', '*');
-    return output;
+    return ContentService
+      .createTextOutput(JSON.stringify(errorResponse))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
