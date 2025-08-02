@@ -1,96 +1,125 @@
 /**
- * このスクリプトは、体重管理アプリのバックエンドとして機能します。
- * Googleスプレッドシートをデータベースとして使用し、体重データの読み書きを行います。
+ * 体重管理アプリのバックエンド
+ * CORS対応強化版
  */
 
-// --- 定数設定 ---
-const SHEET_ID = '1sC5s4nBNCxxo_G3nB2NB2a2lJ2X8J2jnmGFaX2Jj_uE'; // 対象のスプレッドシートID
-const SHEET_NAME = '体重記録'; // 対象のシート名
+const SHEET_ID = '1sC5s4nBNCxxo_G3nB2NB2a2lJ2X8J2jnmGFaX2Jj_uE';
+const SHEET_NAME = '体重記録';
 
 /**
- * HTTP GETリクエストを処理します。
- */
-function doGet(e) {
-  try {
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
-    const range = sheet.getDataRange();
-    const values = range.getValues();
-
-    const data = values.slice(1).map(row => {
-      if (!row[0]) return null;
-      const date = new Date(row[0]);
-      const yyyy = date.getFullYear();
-      const mm = String(date.getMonth() + 1).padStart(2, '0');
-      const dd = String(date.getDate()).padStart(2, '0');
-      
-      return {
-        date: `${yyyy}-${mm}-${dd}`,
-        weight: row[1]
-      };
-    }).filter(item => item !== null);
-
-    const output = { status: 'success', data: data };
-    // お客様の元の構文に戻し、CORSヘッダーを設定
-    return ContentService.createTextOutput(JSON.stringify(output))
-      .setMimeType(ContentService.MimeType.JSON)
-      .setHeaders({'Access-Control-Allow-Origin': '*'});
-
-  } catch (error) {
-    const errorOutput = { status: 'error', message: error.toString() };
-    return ContentService.createTextOutput(JSON.stringify(errorOutput))
-      .setMimeType(ContentService.MimeType.JSON)
-      .setHeaders({'Access-Control-Allow-Origin': '*'});
-  }
-}
-
-/**
- * HTTP POSTリクエストを処理します。
- */
-function doPost(e) {
-  try {
-    if (!e.postData || !e.postData.contents) {
-      throw new Error('リクエストデータがありません。');
-    }
-    
-    const params = JSON.parse(e.postData.contents);
-    if (!params.data || !Array.isArray(params.data)) {
-      throw new Error('データ形式が正しくありません。「data」プロパティが配列である必要があります。');
-    }
-
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
-    
-    sheet.clearContents();
-    sheet.appendRow(['日付', '体重']);
-
-    const sortedData = params.data.sort((a, b) => new Date(a.date) - new Date(b.date));
-    const rows = sortedData.map(item => [item.date, item.weight]);
-    
-    if (rows.length > 0) {
-      sheet.getRange(2, 1, rows.length, 2).setValues(rows);
-    }
-
-    const output = { status: 'success', message: 'データが正常に更新されました。' };
-    return ContentService.createTextOutput(JSON.stringify(output))
-      .setMimeType(ContentService.MimeType.JSON)
-      .setHeaders({'Access-Control-Allow-Origin': '*'});
-
-  } catch (error) {
-    const errorOutput = { status: 'error', message: error.toString() };
-    return ContentService.createTextOutput(JSON.stringify(errorOutput))
-      .setMimeType(ContentService.MimeType.JSON)
-      .setHeaders({'Access-Control-Allow-Origin': '*'});
-  }
-}
-
-/**
- * CORSプリフライトリクエスト（OPTIONS）を処理します。
+ * CORSプリフライトリクエスト（OPTIONS）を処理
  */
 function doOptions(e) {
-  return ContentService.createTextOutput()
+  Logger.log('OPTIONS request received');
+  return ContentService.createTextOutput('')
     .setMimeType(ContentService.MimeType.TEXT)
     .setHeaders({
       'Access-Control-Allow-Origin': '*',
-      'Access-control-allow-methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+      'Access-Control-Max-Age': '86400'
     });
+}
+
+/**
+ * GET リクエスト - データ読み込み
+ */
+function doGet(e) {
+  Logger.log('GET request received');
+  
+  try {
+    // UserPropertiesから読み込み（スプレッドシートの代わり）
+    const userProperties = PropertiesService.getUserProperties();
+    const jsonData = userProperties.getProperty('weightData');
+    const data = JSON.parse(jsonData || '[]');
+    
+    Logger.log('Data loaded: ' + data.length + ' records');
+    
+    const output = { 
+      status: 'success', 
+      data: data,
+      message: 'データを正常に読み込みました'
+    };
+    
+    return ContentService.createTextOutput(JSON.stringify(output))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeaders({
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
+      });
+      
+  } catch (error) {
+    Logger.log('GET Error: ' + error.toString());
+    
+    const errorOutput = { 
+      status: 'error', 
+      message: '読み込みエラー: ' + error.toString(),
+      data: []
+    };
+    
+    return ContentService.createTextOutput(JSON.stringify(errorOutput))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeaders({
+        'Access-Control-Allow-Origin': '*'
+      });
+  }
+}
+
+/**
+ * POST リクエスト - データ保存
+ */
+function doPost(e) {
+  Logger.log('POST request received');
+  Logger.log('Request parameters: ' + JSON.stringify(e));
+  
+  try {
+    // リクエストデータの確認
+    if (!e || !e.postData || !e.postData.contents) {
+      throw new Error('リクエストデータがありません');
+    }
+    
+    Logger.log('POST data contents: ' + e.postData.contents);
+    
+    const requestData = JSON.parse(e.postData.contents);
+    Logger.log('Parsed request data: ' + JSON.stringify(requestData));
+    
+    if (!requestData.data || !Array.isArray(requestData.data)) {
+      throw new Error('データ形式が正しくありません。dataプロパティが配列である必要があります。');
+    }
+    
+    // UserPropertiesに保存
+    const userProperties = PropertiesService.getUserProperties();
+    userProperties.setProperty('weightData', JSON.stringify(requestData.data));
+    
+    Logger.log('Data saved successfully: ' + requestData.data.length + ' records');
+    
+    const output = { 
+      status: 'success', 
+      message: 'データが正常に保存されました。' + requestData.data.length + '件のレコードを保存しました。',
+      savedCount: requestData.data.length
+    };
+    
+    return ContentService.createTextOutput(JSON.stringify(output))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeaders({
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
+      });
+      
+  } catch (error) {
+    Logger.log('POST Error: ' + error.toString());
+    
+    const errorOutput = { 
+      status: 'error', 
+      message: '保存エラー: ' + error.toString()
+    };
+    
+    return ContentService.createTextOutput(JSON.stringify(errorOutput))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeaders({
+        'Access-Control-Allow-Origin': '*'
+      });
+  }
 }
