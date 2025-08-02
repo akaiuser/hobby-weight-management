@@ -15,6 +15,7 @@
     <meta property="og:description" content="">
     <meta name="twitter:title" content="">
     <meta name="twitter:description" content="">
+    <link rel="icon" href="assets/favicon.jpg" type="image/jpeg">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -746,7 +747,7 @@
                         };
                         console.error('JSONP Error Details:', errorInfo);
                         
-                        reject(new Error('JSONP保存スクリプトの読み込みに失敗しました。ネットワークやブラウザの設定を確認してください。'));
+                        reject(new Error('Google Apps Script との　せつぞくに　しっぱいしました。ネットワークを　かくにんしてください。'));
                     };
                     
                     document.head.appendChild(script);
@@ -794,9 +795,9 @@
                         };
                         
                         script.src = `${GAS_API_URL}?callback=${callbackName}&t=${Date.now()}`;
-                        script.onerror = () => reject(new Error('JSONPスクリプトの読み込みに失敗しました'));
+                        script.onerror = () => reject(new Error('Google Apps Script との　せつぞくに　しっぱいしました。URLを　かくにんしてください。'));
                         document.head.appendChild(script);
-                        setTimeout(() => reject(new Error('JSONPタイムアウトしました')), 10000);
+                        setTimeout(() => reject(new Error('よみこみが　タイムアウトしました　- ネットワークを　かくにんしてください')), 10000);
                     });
                 } catch (e) {
                     console.error("Load Error Details:", e);
@@ -902,9 +903,9 @@
                         document.head.removeChild(script);
                         delete window[callbackName];
                         
-                        // Googleサイトのサンドボックス環境でJSONPが失敗した場合の対処
-                        console.warn('JSONP failed, this might be due to Google Sites sandbox restrictions');
-                        reject(new Error('せつぞく　エラー: GoogleサイトのSeキュリティせいげんにより　しんちょうの　ほぞんが　せいげんされています。\nちょくせつ　Google Apps Scriptの　URLに　アクセスして　ためしてください。'));
+                        // GitHub Pages環境でのJSONP通信エラー対応
+                        console.warn('JSONP failed, checking connection to Google Apps Script');
+                        reject(new Error('せつぞく　エラー: Google Apps Script との　せつぞくに　しっぱいしました。\nGoogle Apps Script が　どうさしているか　かくにんしてください。'));
                     };
                     
                     document.head.appendChild(script);
