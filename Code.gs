@@ -1,5 +1,5 @@
 /**
- * 体重管理アプリのバックエンド - GAS互換性対応版
+ * 体重管理アプリのバックエンド - 最大互換性対応版
  */
 
 /**
@@ -8,15 +8,13 @@
 function doOptions(e) {
   Logger.log('OPTIONS request received');
   
-  return ContentService
-    .createTextOutput('')
-    .setMimeType(ContentService.MimeType.TEXT)
-    .withHeaders({
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-      'Access-Control-Max-Age': '3600'
-    });
+  var output = ContentService.createTextOutput('');
+  output.setMimeType(ContentService.MimeType.TEXT);
+  output.setHeader('Access-Control-Allow-Origin', '*');
+  output.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  output.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  output.setHeader('Access-Control-Max-Age', '3600');
+  return output;
 }
 
 /**
@@ -27,17 +25,17 @@ function doGet(e) {
   
   try {
     // パラメータの安全な取得
-    const params = e && e.parameter ? e.parameter : {};
+    var params = e && e.parameter ? e.parameter : {};
     Logger.log('Parameters: ' + JSON.stringify(params));
     
     // UserPropertiesから読み込み
-    const userProperties = PropertiesService.getUserProperties();
-    const jsonData = userProperties.getProperty('weightData');
-    const data = JSON.parse(jsonData || '[]');
+    var userProperties = PropertiesService.getUserProperties();
+    var jsonData = userProperties.getProperty('weightData');
+    var data = JSON.parse(jsonData || '[]');
     
     Logger.log('Data loaded successfully: ' + data.length + ' records');
     
-    const response = {
+    var response = {
       status: 'success',
       data: data,
       message: 'データを正常に読み込みました',
@@ -45,45 +43,39 @@ function doGet(e) {
     };
     
     // JSONPコールバックが指定されている場合
-    const callback = params.callback;
+    var callback = params.callback;
     if (callback) {
-      const jsonpResponse = callback + '(' + JSON.stringify(response) + ');';
-      return ContentService
-        .createTextOutput(jsonpResponse)
-        .setMimeType(ContentService.MimeType.JAVASCRIPT)
-        .withHeaders({
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
-        });
+      var jsonpResponse = callback + '(' + JSON.stringify(response) + ');';
+      var output = ContentService.createTextOutput(jsonpResponse);
+      output.setMimeType(ContentService.MimeType.JAVASCRIPT);
+      output.setHeader('Access-Control-Allow-Origin', '*');
+      output.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      output.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      return output;
     }
     
     // 通常のJSONレスポンス
-    return ContentService
-      .createTextOutput(JSON.stringify(response))
-      .setMimeType(ContentService.MimeType.JSON)
-      .withHeaders({
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      });
+    var output = ContentService.createTextOutput(JSON.stringify(response));
+    output.setMimeType(ContentService.MimeType.JSON);
+    output.setHeader('Access-Control-Allow-Origin', '*');
+    output.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    output.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    return output;
       
   } catch (error) {
     Logger.log('GET Error: ' + error.toString());
     
-    const errorResponse = {
+    var errorResponse = {
       status: 'error',
       message: '読み込みエラー: ' + error.toString(),
       data: [],
       timestamp: new Date().toISOString()
     };
     
-    return ContentService
-      .createTextOutput(JSON.stringify(errorResponse))
-      .setMimeType(ContentService.MimeType.JSON)
-      .withHeaders({
-        'Access-Control-Allow-Origin': '*'
-      });
+    var output = ContentService.createTextOutput(JSON.stringify(errorResponse));
+    output.setMimeType(ContentService.MimeType.JSON);
+    output.setHeader('Access-Control-Allow-Origin', '*');
+    return output;
   }
 }
 
@@ -101,15 +93,15 @@ function doPost(e) {
     Logger.log('POST data type: ' + (e.postData.type || 'unknown'));
     Logger.log('POST data contents: ' + (e.postData.contents || 'empty'));
     
-    let requestData;
+    var requestData;
     
     // FormDataの場合の処理
     if (e.postData.type === 'application/x-www-form-urlencoded') {
-      const contents = e.postData.contents || '';
-      const params = contents.split('&');
-      let dataParam = null;
-      for (let i = 0; i < params.length; i++) {
-        if (params[i].startsWith('data=')) {
+      var contents = e.postData.contents || '';
+      var params = contents.split('&');
+      var dataParam = null;
+      for (var i = 0; i < params.length; i++) {
+        if (params[i].indexOf('data=') === 0) {
           dataParam = decodeURIComponent(params[i].substring(5));
           break;
         }
@@ -134,41 +126,37 @@ function doPost(e) {
     }
     
     // UserPropertiesに保存
-    const userProperties = PropertiesService.getUserProperties();
+    var userProperties = PropertiesService.getUserProperties();
     userProperties.setProperty('weightData', JSON.stringify(requestData.data));
     
     Logger.log('Data saved successfully: ' + requestData.data.length + ' records');
     
-    const response = {
+    var response = {
       status: 'success',
       message: 'データが正常に保存されました。' + requestData.data.length + '件のレコードを保存しました。',
       savedCount: requestData.data.length,
       timestamp: new Date().toISOString()
     };
     
-    return ContentService
-      .createTextOutput(JSON.stringify(response))
-      .setMimeType(ContentService.MimeType.JSON)
-      .withHeaders({
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      });
+    var output = ContentService.createTextOutput(JSON.stringify(response));
+    output.setMimeType(ContentService.MimeType.JSON);
+    output.setHeader('Access-Control-Allow-Origin', '*');
+    output.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    output.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    return output;
       
   } catch (error) {
     Logger.log('POST Error: ' + error.toString());
     
-    const errorResponse = {
+    var errorResponse = {
       status: 'error',
       message: '保存エラー: ' + error.toString(),
       timestamp: new Date().toISOString()
     };
     
-    return ContentService
-      .createTextOutput(JSON.stringify(errorResponse))
-      .setMimeType(ContentService.MimeType.JSON)
-      .withHeaders({
-        'Access-Control-Allow-Origin': '*'
-      });
+    var output = ContentService.createTextOutput(JSON.stringify(errorResponse));
+    output.setMimeType(ContentService.MimeType.JSON);
+    output.setHeader('Access-Control-Allow-Origin', '*');
+    return output;
   }
 }
