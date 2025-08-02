@@ -43,18 +43,25 @@ function doGet(e) {
       data: data
     };
     
-    // CORS対応ヘッダーを設定してJSONを返す
+    // ▼▼▼【修正点1】CORS許可ヘッダーを追加 ▼▼▼
     return ContentService.createTextOutput(JSON.stringify(output))
-      .setMimeType(ContentService.MimeType.JSON);
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeaders({
+        'Access-Control-Allow-Origin': '*' // すべてのオリジンからのアクセスを許可
+      });
 
   } catch (error) {
-    // エラーハンドリング
     const errorOutput = {
       status: 'error',
       message: error.toString()
     };
+    
+    // ▼▼▼【修正点2】エラー時にもCORS許可ヘッダーを追加 ▼▼▼
     return ContentService.createTextOutput(JSON.stringify(errorOutput))
-      .setMimeType(ContentService.MimeType.JSON);
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeaders({
+        'Access-Control-Allow-Origin': '*' // すべてのオリジンからのアクセスを許可
+      });
   }
 }
 
@@ -71,7 +78,6 @@ function doPost(e) {
     }
     
     const params = JSON.parse(e.postData.contents);
-    
     if (!params.data || !Array.isArray(params.data)) {
       throw new Error('データ形式が正しくありません。「data」プロパティが配列である必要があります。');
     }
@@ -84,7 +90,6 @@ function doPost(e) {
 
     // 日付でソートしてから書き込む
     const sortedData = params.data.sort((a, b) => new Date(a.date) - new Date(b.date));
-    
     const rows = sortedData.map(item => [item.date, item.weight]);
     
     if (rows.length > 0) {
@@ -96,10 +101,11 @@ function doPost(e) {
       message: 'データが正常に更新されました。'
     };
 
-    // CORS対応ヘッダーを設定してJSONを返す
+    // ▼▼▼【修正点3】既存のヘッダーにCORS許可ヘッダーを追加 ▼▼▼
     return ContentService.createTextOutput(JSON.stringify(output))
       .setMimeType(ContentService.MimeType.JSON)
       .setHeaders({
+        'Access-Control-Allow-Origin': '*', // すべてのオリジンからのアクセスを許可
         'X-Content-Type-Options': 'nosniff'
       });
 
@@ -109,9 +115,12 @@ function doPost(e) {
       status: 'error',
       message: error.toString()
     };
+
+    // ▼▼▼【修正点4】エラー時にもCORS許可ヘッダーを追加 ▼▼▼
     return ContentService.createTextOutput(JSON.stringify(errorOutput))
       .setMimeType(ContentService.MimeType.JSON)
       .setHeaders({
+        'Access-Control-Allow-Origin': '*', // すべてのオリジンからのアクセスを許可
         'X-Content-Type-Options': 'nosniff'
       });
   }
