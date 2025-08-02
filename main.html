@@ -104,6 +104,55 @@
         .period-btn.active-period:hover {
             background-color: #FFD700;
         }
+        /* カスタム確認ダイアログのスタイル */
+        .custom-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .dialog-content {
+            background-color: #00005E;
+            border: 4px solid #FFFFFF;
+            box-shadow: 0 0 0 4px #636363;
+            border-radius: 8px;
+            padding: 2rem;
+            max-width: 400px;
+            text-align: center;
+        }
+        .dialog-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+        .dialog-btn {
+            padding: 0.75rem 1.5rem;
+            border: 2px solid #FFFFFF;
+            border-radius: 4px;
+            background-color: transparent;
+            color: #FFFFFF;
+            font-family: 'DotGothic16', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .dialog-btn.confirm {
+            background-color: #FF6B6B;
+            border-color: #FF6B6B;
+        }
+        .dialog-btn.cancel {
+            background-color: #636363;
+            border-color: #636363;
+        }
+        .dialog-btn:hover {
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body class="antialiased p-4">
@@ -113,6 +162,20 @@
         <div class="flex flex-col items-center">
             <div class="spinner"></div>
             <p id="loadingMessage" class="text-white text-lg mt-4">データをよみこみちゅう...</p>
+        </div>
+    </div>
+
+    <!-- カスタム確認ダイアログ -->
+    <div id="confirmDialog" class="custom-dialog" style="display: none;">
+        <div class="dialog-content">
+            <h3 class="text-xl font-semibold text-white mb-4">きろくを　けす</h3>
+            <div id="dialogMessage" class="text-white mb-4">
+                <!-- ここに確認メッセージが動的に挿入される -->
+            </div>
+            <div class="dialog-buttons">
+                <button id="confirmYes" class="dialog-btn confirm">はい</button>
+                <button id="confirmNo" class="dialog-btn cancel">いいえ</button>
+            </div>
         </div>
     </div>
 
@@ -220,6 +283,12 @@
             const statusDisplay = document.getElementById('statusDisplay');
             // ▲▲▲【変更点2】ここまで ▲▲▲
 
+            // 確認ダイアログ関連のDOM要素
+            const confirmDialog = document.getElementById('confirmDialog');
+            const dialogMessage = document.getElementById('dialogMessage');
+            const confirmYes = document.getElementById('confirmYes');
+            const confirmNo = document.getElementById('confirmNo');
+
             let weightData = [];
             let weightChart;
             let userHeight = 0; // 身長を保持する変数
@@ -244,6 +313,48 @@
                 setTimeout(() => heightMessage.textContent = '', 3000);
             };
             // ▲▲▲【変更点3】ここまで ▲▲▲
+
+            // カスタム確認ダイアログを表示する関数
+            const showConfirmDialog = (date, weight) => {
+                return new Promise((resolve) => {
+                    // メッセージを設定
+                    dialogMessage.innerHTML = `
+                        <p class="mb-2"><strong>ひづけ:</strong> ${date}</p>
+                        <p class="mb-4"><strong>たいじゅう:</strong> ${weight} kg</p>
+                        <p class="text-yellow-300">このきろくを　けしてしまいますが　よろしいですか？</p>
+                    `;
+                    
+                    // ダイアログを表示
+                    confirmDialog.style.display = 'flex';
+                    
+                    // イベントリスナーを設定
+                    const handleYes = () => {
+                        confirmDialog.style.display = 'none';
+                        confirmYes.removeEventListener('click', handleYes);
+                        confirmNo.removeEventListener('click', handleNo);
+                        resolve(true);
+                    };
+                    
+                    const handleNo = () => {
+                        confirmDialog.style.display = 'none';
+                        confirmYes.removeEventListener('click', handleYes);
+                        confirmNo.removeEventListener('click', handleNo);
+                        resolve(false);
+                    };
+                    
+                    confirmYes.addEventListener('click', handleYes);
+                    confirmNo.addEventListener('click', handleNo);
+                    
+                    // ESCキーでキャンセル
+                    const handleEscape = (e) => {
+                        if (e.key === 'Escape') {
+                            handleNo();
+                            document.removeEventListener('keydown', handleEscape);
+                        }
+                    };
+                    document.addEventListener('keydown', handleEscape);
+                });
+            };
 
             // ▼▼▼【変更点4】ステータス表示を更新する関数を追加 ▼▼▼
             const updateStatusDisplay = () => {
@@ -460,7 +571,12 @@
 
                 document.querySelectorAll('#historyTableBody button').forEach(btn => {
                     btn.addEventListener('click', (e) => {
-                        handleDelete(e.target.dataset.date);
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const date = e.target.dataset.date;
+                        if (date) {
+                            handleDelete(date);
+                        }
                     });
                 });
             };
@@ -592,12 +708,27 @@
                 weightInputEl.value = '';
             };
 
-            const handleDelete = (date) => {
-                // window.confirm は Googleサイトの埋め込みでは動作しないことがあるため、簡易的な確認に変更
-                const confirmed = confirm(`${date} のきろくを　けしてしまいますが　よろしいですか？`);
+            const handleDelete = async (date) => {
+                // 削除対象のデータを検索
+                const targetRecord = weightData.find(d => d.date === date);
+                if (!targetRecord) {
+                    alert('きろくが　みつかりません。');
+                    return;
+                }
+                
+                // カスタム確認ダイアログを表示
+                const confirmed = await showConfirmDialog(date, targetRecord.weight.toFixed(1));
+                
                 if (confirmed) {
-                    const newData = weightData.filter(d => d.date !== date);
-                    saveData(newData);
+                    try {
+                        showLoader('データを　けしています...');
+                        const newData = weightData.filter(d => d.date !== date);
+                        await saveData(newData);
+                        showFormMessage('きろくを　けしました。', false);
+                    } catch (e) {
+                        console.error("Delete Error:", e);
+                        alert(`けすときに　エラーが　はっせいしました: ${e.message}`);
+                    }
                 }
             };
 
