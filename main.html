@@ -271,12 +271,15 @@
                 try {
                     console.log('Sending data to GAS:', data);
                     
-                    // FormDataを使用してCORSプリフライトを回避
-                    const formData = new FormData();
+                    // URLSearchParamsを使用してform-urlencodedで送信
+                    const formData = new URLSearchParams();
                     formData.append('data', JSON.stringify(data));
                     
                     const response = await fetch(GAS_API_URL, {
                         method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
                         body: formData
                     });
 
