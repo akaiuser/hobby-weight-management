@@ -271,16 +271,16 @@
                 try {
                     console.log('Sending data to GAS:', data);
                     
+                    // FormDataを使用してCORSプリフライトを回避
+                    const formData = new FormData();
+                    formData.append('data', JSON.stringify(data));
+                    
                     const response = await fetch(GAS_API_URL, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ data: data })
+                        body: formData
                     });
 
                     console.log('Response status:', response.status);
-                    console.log('Response headers:', response.headers);
 
                     if (!response.ok) {
                         const errorText = await response.text();
@@ -315,7 +315,7 @@
                     if (e.name === 'TypeError' && e.message.includes('fetch')) {
                         alert(`ネットワークエラー: GASへの接続に失敗しました。\n\n詳細: ${e.message}\n\nGASのURLとデプロイ設定を確認してください。`);
                     } else if (e.message.includes('CORS')) {
-                        alert(`CORSエラー: ${e.message}\n\nGASを再デプロイしてください。`);
+                        alert(`CORSエラー: ${e.message}\n\nローカルファイルから直接開くとCORSエラーが発生します。Live Serverを使用してください。`);
                     } else {
                         alert(`ほぞんエラー: ${e.message}`);
                     }
@@ -331,11 +331,9 @@
                 try {
                     console.log('Loading data from GAS...');
                     
-                    const response = await fetch(GAS_API_URL, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        }
+                    // シンプルなGETリクエスト - CORSプリフライトを避ける
+                    const response = await fetch(GAS_API_URL + '?t=' + Date.now(), {
+                        method: 'GET'
                     });
                     
                     console.log('Load response status:', response.status);
@@ -369,7 +367,11 @@
                     }
                 } catch (e) {
                     console.error("Load Error Details:", e);
-                    alert(`よみこみエラー: ${e.message}`);
+                    if (e.message.includes('CORS') || e.message.includes('fetch')) {
+                        alert(`つうしんエラー: ローカルファイルから直接開くとCORSエラーが発生します。\n\nLive Serverまたはローカルサーバーを使用してください。\n\n詳細: ${e.message}`);
+                    } else {
+                        alert(`よみこみエラー: ${e.message}`);
+                    }
                 } finally {
                     hideLoader();
                 }
