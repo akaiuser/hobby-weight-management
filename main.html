@@ -87,6 +87,23 @@
         .dq-table th {
             background-color: #00003B;
         }
+        /* 期間選択ボタンのスタイル */
+        .period-btn {
+            border: 2px solid #FFFFFF;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .period-btn.active-period {
+            background-color: #FFD700;
+            color: #000000;
+            border-color: #FFD700;
+        }
+        .period-btn:hover {
+            background-color: rgba(255, 215, 0, 0.2);
+        }
+        .period-btn.active-period:hover {
+            background-color: #FFD700;
+        }
     </style>
 </head>
 <body class="antialiased p-4">
@@ -149,6 +166,14 @@
 
         <!-- グラフ表示エリア -->
         <div class="dq-window">
+            <!-- 期間選択ボタン -->
+            <div class="flex flex-wrap gap-2 mb-4">
+                <button id="period1week" class="dq-button text-sm px-3 py-1 period-btn" data-period="1week">1しゅうかん</button>
+                <button id="period1month" class="dq-button text-sm px-3 py-1 period-btn active-period" data-period="1month">1かげつ</button>
+                <button id="period3months" class="dq-button text-sm px-3 py-1 period-btn" data-period="3months">3かげつ</button>
+                <button id="period1year" class="dq-button text-sm px-3 py-1 period-btn" data-period="1year">1ねん</button>
+                <button id="periodAll" class="dq-button text-sm px-3 py-1 period-btn" data-period="all">すべて</button>
+            </div>
             <canvas id="weightChart"></canvas>
         </div>
 
@@ -198,6 +223,7 @@
             let weightData = [];
             let weightChart;
             let userHeight = 0; // 身長を保持する変数
+            let currentPeriod = '1month'; // 現在選択されている表示期間
 
             // --- 2. ローダーとメッセージ表示の関数 ---
             const showLoader = (message) => {
@@ -250,6 +276,33 @@
             };
             // ▲▲▲【変更点4】ここまで ▲▲▲
 
+            // 期間に基づいてデータをフィルタリングする関数
+            const filterDataByPeriod = (data, period) => {
+                if (period === 'all') return data;
+                
+                const now = new Date();
+                const cutoffDate = new Date();
+                
+                switch (period) {
+                    case '1week':
+                        cutoffDate.setDate(now.getDate() - 7);
+                        break;
+                    case '1month':
+                        cutoffDate.setMonth(now.getMonth() - 1);
+                        break;
+                    case '3months':
+                        cutoffDate.setMonth(now.getMonth() - 3);
+                        break;
+                    case '1year':
+                        cutoffDate.setFullYear(now.getFullYear() - 1);
+                        break;
+                    default:
+                        return data;
+                }
+                
+                return data.filter(d => new Date(d.date) >= cutoffDate);
+            };
+
             // --- 3. グラフとテーブルの描画関数 ---
             const renderChart = () => {
                 if (weightChart) {
@@ -257,26 +310,82 @@
                 }
                 if (!chartCanvas) return;
 
-                const sortedData = [...weightData].sort((a, b) => new Date(a.date) - new Date(b.date));
+                // 期間でフィルタリングしたデータを取得
+                const filteredData = filterDataByPeriod(weightData, currentPeriod);
+                const sortedData = [...filteredData].sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                if (sortedData.length === 0) {
+                    // データがない場合の表示
+                    const ctx = chartCanvas.getContext('2d');
+                    ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = '20px DotGothic16';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('このきかんには　データが　ありません', chartCanvas.width / 2, chartCanvas.height / 2);
+                    return;
+                }
                 
                 Chart.defaults.font.family = "'DotGothic16', sans-serif";
                 Chart.defaults.color = '#FFFFFF';
+
+                // 標準体重の計算
+                const standardWeight = userHeight > 0 ? ((userHeight / 100) ** 2) * 22 : null;
+                
+                // Y軸の範囲を標準体重を中心に設定
+                let yMin, yMax;
+                const weights = sortedData.map(d => d.weight);
+                const dataMin = Math.min(...weights);
+                const dataMax = Math.max(...weights);
+                
+                if (standardWeight && userHeight > 0) {
+                    // 標準体重を中心とした範囲設定
+                    const range = Math.max(
+                        Math.abs(dataMax - standardWeight),
+                        Math.abs(dataMin - standardWeight),
+                        5 // 最低でも±5kgの範囲を確保
+                    );
+                    yMin = standardWeight - range * 1.2;
+                    yMax = standardWeight + range * 1.2;
+                } else {
+                    // 標準体重がない場合は従来通り
+                    const range = dataMax - dataMin;
+                    const padding = Math.max(range * 0.1, 2);
+                    yMin = dataMin - padding;
+                    yMax = dataMax + padding;
+                }
+
+                // データセットの準備
+                const datasets = [{
+                    label: 'たいじゅう (kg)',
+                    data: sortedData.map(d => d.weight),
+                    borderColor: '#FFD700',
+                    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+                    fill: true,
+                    tension: 0.1,
+                    pointBackgroundColor: '#FFD700',
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }];
+
+                // 標準体重のラインを追加
+                if (standardWeight && userHeight > 0) {
+                    datasets.push({
+                        label: 'ひょうじゅんたいじゅう',
+                        data: Array(sortedData.length).fill(standardWeight),
+                        borderColor: '#FF6B6B',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0,
+                        pointHoverRadius: 0
+                    });
+                }
 
                 weightChart = new Chart(chartCanvas, {
                     type: 'line',
                     data: {
                         labels: sortedData.map(d => d.date),
-                        datasets: [{
-                            label: 'たいじゅう (kg)',
-                            data: sortedData.map(d => d.weight),
-                            borderColor: '#FFD700',
-                            backgroundColor: 'rgba(255, 215, 0, 0.2)',
-                            fill: true,
-                            tension: 0.1,
-                            pointBackgroundColor: '#FFD700',
-                            pointRadius: 4,
-                            pointHoverRadius: 6
-                        }]
+                        datasets: datasets
                     },
                     options: {
                         responsive: true,
@@ -295,13 +404,34 @@
                                 ticks: { color: '#FFFFFF' }
                             },
                             y: {
-                                beginAtZero: false,
+                                min: yMin,
+                                max: yMax,
                                 grid: { color: 'rgba(255, 255, 255, 0.2)' },
-                                ticks: { color: '#FFFFFF' }
+                                ticks: { 
+                                    color: '#FFFFFF',
+                                    callback: function(value) {
+                                        return value.toFixed(1) + ' kg';
+                                    }
+                                }
                             }
                         },
                         plugins: {
-                            legend: { labels: { color: '#FFFFFF' } }
+                            legend: { 
+                                labels: { color: '#FFFFFF' },
+                                display: true
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    afterLabel: function(context) {
+                                        if (standardWeight && userHeight > 0 && context.datasetIndex === 0) {
+                                            const diff = context.parsed.y - standardWeight;
+                                            const diffSign = diff >= 0 ? '+' : '';
+                                            return `ひょうじゅんたいじゅうより: ${diffSign}${diff.toFixed(1)} kg`;
+                                        }
+                                        return '';
+                                    }
+                                }
+                            }
                         }
                     }
                 });
@@ -510,6 +640,19 @@
                 loadHeight();
                 saveHeightBtn.addEventListener('click', saveHeight);
                 // ▲▲▲【変更点7】ここまで ▲▲▲
+
+                // 期間選択ボタンのイベントリスナー
+                document.querySelectorAll('.period-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        // アクティブボタンの切り替え
+                        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active-period'));
+                        e.target.classList.add('active-period');
+                        
+                        // 期間を更新してグラフを再描画
+                        currentPeriod = e.target.dataset.period;
+                        renderChart();
+                    });
+                });
 
                 if (GAS_API_URL.includes('ここにデプロイしたURLを貼り付け')) {
                     hideLoader();
