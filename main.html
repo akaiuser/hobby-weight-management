@@ -295,9 +295,11 @@
                 try {
                     const response = await fetch(GAS_API_URL, {
                         method: 'POST',
+                        // 'Content-Type': 'text/plain' を使うとGAS側で正しく解釈されやすい
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8',
+                        },
                         body: JSON.stringify({ data: data }),
-                        headers: { 'Content-Type': 'application/json' },
-                        redirect: 'follow'
                     });
 
                     if (!response.ok) {
@@ -307,19 +309,19 @@
                     const result = await response.json();
 
                     if (result.status === 'success') {
-                        weightData = data;
-                        renderChart();
-                        renderTable();
+                        // 保存が成功したら、サーバーから最新のデータを再取得してUIを更新する
+                        await loadData();
                         showFormMessage('データを　きろくしました！', false);
                     } else {
                         throw new Error(result.message || 'スクリプトの実行に失敗しました。');
                     }
 
                 } catch (e) {
+                    console.error("Save Error Details:", e);
                     alert(`ほぞんエラー: ${e.message}\n\n開発者ツール（F12キー）のコンソールで詳細を確認してください。`);
                     showFormMessage('ほぞんに　しっぱいしました。', true);
                 } finally {
-                    hideLoader();
+                    // hideLoaderはloadData内で呼ばれるので不要
                     addWeightBtn.disabled = false;
                 }
             };
