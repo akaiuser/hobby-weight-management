@@ -331,50 +331,97 @@
                 try {
                     console.log('Loading data from GAS...');
                     
-                    // シンプルなGETリクエスト - CORSプリフライトを避ける
-                    const response = await fetch(GAS_API_URL + '?t=' + Date.now(), {
-                        method: 'GET'
-                    });
+                    // JSONP風のアプローチを試す（最後の手段）
+                    const timestamp = Date.now();
+                    const url = `${GAS_API_URL}?callback=handleData&t=${timestamp}`;
                     
-                    console.log('Load response status:', response.status);
-                    
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error('Load response error text:', errorText);
-                        throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
-                    }
-                    
-                    const responseText = await response.text();
-                    console.log('Load response text:', responseText);
-                    
-                    let result;
+                    // 通常のfetchを試す
                     try {
-                        result = JSON.parse(responseText);
-                    } catch (parseError) {
-                        console.error('Load JSON parse error:', parseError);
-                        throw new Error('サーバーからの応答がJSON形式ではありません');
+                        const response = await fetch(GAS_API_URL + '?t=' + timestamp, {
+                            method: 'GET',
+                            mode: 'cors',
+                            credentials: 'omit'
+                        });
+                        
+                        console.log('Load response status:', response.status);
+                        console.log('Load response headers:', Object.fromEntries(response.headers.entries()));
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+                        }
+                        
+                        const responseText = await response.text();
+                        console.log('Load response text:', responseText);
+                        
+                        let result;
+                        try {
+                            result = JSON.parse(responseText);
+                        } catch (parseError) {
+                            console.error('Load JSON parse error:', parseError);
+                            throw new Error('サーバーからの応答がJSON形式ではありません: ' + responseText);
+                        }
+                        
+                        console.log('Load parsed result:', result);
+                        
+                        if (result.status === 'success') {
+                            weightData = result.data.map(d => ({...d, weight: parseFloat(d.weight)}));
+                            renderChart();
+                            renderTable();
+                            console.log('Data loaded successfully:', weightData.length, 'records');
+                            return; // 成功した場合はここで終了
+                        } else {
+                            throw new Error(result.message || 'データのよみこみに　しっぱいしました。');
+                        }
+                    } catch (fetchError) {
+                        console.error('Fetch failed:', fetchError);
+                        
+                        // フォールバック: script要素を使用したJSONPアプローチ
+                        console.log('Trying JSONP fallback...');
+                        await loadDataWithJSONP();
                     }
                     
-                    console.log('Load parsed result:', result);
-                    
-                    if (result.status === 'success') {
-                        weightData = result.data.map(d => ({...d, weight: parseFloat(d.weight)}));
-                        renderChart();
-                        renderTable();
-                        console.log('Data loaded successfully:', weightData.length, 'records');
-                    } else {
-                        throw new Error(result.message || 'データのよみこみに　しっぱいしました。');
-                    }
                 } catch (e) {
                     console.error("Load Error Details:", e);
                     if (e.message.includes('CORS') || e.message.includes('fetch')) {
-                        alert(`つうしんエラー: ローカルファイルから直接開くとCORSエラーが発生します。\n\nLive Serverまたはローカルサーバーを使用してください。\n\n詳細: ${e.message}`);
+                        alert(`つうしんエラー: CORSの問題が発生しています。\n\nGASを再デプロイして、新しいURLに更新してください。\n\n詳細: ${e.message}`);
                     } else {
                         alert(`よみこみエラー: ${e.message}`);
                     }
                 } finally {
                     hideLoader();
                 }
+            };
+
+            // JSONPフォールバック関数
+            const loadDataWithJSONP = () => {
+                return new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    const callbackName = 'jsonp_callback_' + Date.now();
+                    
+                    window[callbackName] = (data) => {
+                        document.head.removeChild(script);
+                        delete window[callbackName];
+                        
+                        if (data.status === 'success') {
+                            weightData = data.data.map(d => ({...d, weight: parseFloat(d.weight)}));
+                            renderChart();
+                            renderTable();
+                            console.log('Data loaded via JSONP:', weightData.length, 'records');
+                            resolve();
+                        } else {
+                            reject(new Error(data.message || 'JSONP読み込みに失敗しました'));
+                        }
+                    };
+                    
+                    script.src = `${GAS_API_URL}?callback=${callbackName}&t=${Date.now()}`;
+                    script.onerror = () => {
+                        document.head.removeChild(script);
+                        delete window[callbackName];
+                        reject(new Error('JSONPスクリプトの読み込みに失敗しました'));
+                    };
+                    
+                    document.head.appendChild(script);
+                });
             };
 
             const handleAdd = () => {
