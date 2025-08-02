@@ -25,6 +25,7 @@ function doGet(e) {
 
     // ヘッダー行を除外 (1行目から)
     const data = values.slice(1).map(row => {
+      if (!row[0]) return null; // 日付がない行はスキップ
       // 日付オブジェクトを 'yyyy-MM-dd' 形式の文字列に変換
       const date = new Date(row[0]);
       const yyyy = date.getFullYear();
@@ -35,7 +36,7 @@ function doGet(e) {
         date: `${yyyy}-${mm}-${dd}`,
         weight: row[1]
       };
-    });
+    }).filter(item => item !== null); // nullの要素を除外
 
     const output = {
       status: 'success',
@@ -44,10 +45,7 @@ function doGet(e) {
     
     // CORS対応ヘッダーを設定してJSONを返す
     return ContentService.createTextOutput(JSON.stringify(output))
-      .setMimeType(ContentService.MimeType.JSON)
-      .setHeaders({
-        'X-Content-Type-Options': 'nosniff'
-      });
+      .setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
     // エラーハンドリング
@@ -56,10 +54,7 @@ function doGet(e) {
       message: error.toString()
     };
     return ContentService.createTextOutput(JSON.stringify(errorOutput))
-      .setMimeType(ContentService.MimeType.JSON)
-      .setHeaders({
-        'X-Content-Type-Options': 'nosniff'
-      });
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
