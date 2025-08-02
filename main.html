@@ -191,7 +191,6 @@
 
                 const sortedData = [...weightData].sort((a, b) => new Date(a.date) - new Date(b.date));
                 
-                // Chart.jsのデフォルトフォント設定
                 Chart.defaults.font.family = "'DotGothic16', sans-serif";
                 Chart.defaults.color = '#FFFFFF';
 
@@ -224,25 +223,17 @@
                                         day: 'MM/dd'
                                     }
                                 },
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.2)'
-                                },
+                                grid: { color: 'rgba(255, 255, 255, 0.2)' },
                                 ticks: { color: '#FFFFFF' }
                             },
                             y: {
                                 beginAtZero: false,
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.2)'
-                                },
+                                grid: { color: 'rgba(255, 255, 255, 0.2)' },
                                 ticks: { color: '#FFFFFF' }
                             }
                         },
                         plugins: {
-                            legend: {
-                                labels: {
-                                    color: '#FFFFFF'
-                                }
-                            }
+                            legend: { labels: { color: '#FFFFFF' } }
                         }
                     }
                 });
@@ -269,7 +260,6 @@
                     historyTableBody.appendChild(row);
                 });
 
-                // 削除ボタンにイベントリスナーを再設定
                 document.querySelectorAll('#historyTableBody button').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         handleDelete(e.target.dataset.date);
@@ -305,19 +295,28 @@
                 try {
                     const response = await fetch(GAS_API_URL, {
                         method: 'POST',
-                        mode: 'no-cors', // doPostを呼び出すための設定
                         body: JSON.stringify({ data: data }),
                         headers: { 'Content-Type': 'application/json' },
+                        redirect: 'follow'
                     });
-                    // no-corsモードではレスポンスは確認できないが、GAS側で処理は実行される
-                    // そのため、成功したと仮定してUIを更新する
-                    weightData = data;
-                    renderChart();
-                    renderTable();
-                    showFormMessage('データを　きろくしました！', false);
+
+                    if (!response.ok) {
+                        throw new Error(`サーバーからの応答が不正です: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+
+                    if (result.status === 'success') {
+                        weightData = data;
+                        renderChart();
+                        renderTable();
+                        showFormMessage('データを　きろくしました！', false);
+                    } else {
+                        throw new Error(result.message || 'スクリプトの実行に失敗しました。');
+                    }
 
                 } catch (e) {
-                    alert(`ほぞんエラー: ${e.message}`);
+                    alert(`ほぞんエラー: ${e.message}\n\n開発者ツール（F12キー）のコンソールで詳細を確認してください。`);
                     showFormMessage('ほぞんに　しっぱいしました。', true);
                 } finally {
                     hideLoader();
@@ -342,10 +341,8 @@
                 const existingIndex = newData.findIndex(d => d.date === date);
                 
                 if (existingIndex > -1) {
-                    // 同じ日付のデータがあれば上書き
                     newData[existingIndex].weight = parseFloat(weight);
                 } else {
-                    // なければ追加
                     newData.push({ date, weight: parseFloat(weight) });
                 }
                 
@@ -360,10 +357,8 @@
                 }
             };
 
-
             // --- 5. 初期化処理とイベントリスナー設定 ---
             const initialize = () => {
-                // 日付入力の初期値を今日に設定
                 const today = new Date();
                 const yyyy = today.getFullYear();
                 const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -377,7 +372,6 @@
                     }
                 });
 
-                // GAS_API_URLが初期値のままなら警告
                 if (GAS_API_URL === 'ここにデプロイしたURLを貼り付け') {
                     hideLoader();
                     alert('HTMLファイルのなかの「GAS_API_URL」を、Google Apps ScriptのURLに　かきかえてください。');
