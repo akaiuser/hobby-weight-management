@@ -151,9 +151,6 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- 1. 定数とDOM要素の定義 ---
-            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-            // ★ Google Apps Scriptをデプロイして取得したURLをここに貼り付けてください ★
-            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
             const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwaL36LrL5WAtbc4ltlvaFcFZ02caPJXVd9DWmzAPMLf4I1c6HLTjb2N_Jrv3wjKRx4/exec';
 
             const weightDateEl = document.getElementById('weightDate');
@@ -295,11 +292,14 @@
                 try {
                     const response = await fetch(GAS_API_URL, {
                         method: 'POST',
-                        // 'Content-Type': 'text/plain' を使うとGAS側で正しく解釈されやすい
                         headers: {
                             'Content-Type': 'text/plain;charset=utf-8',
                         },
                         body: JSON.stringify({ data: data }),
+                        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                        // ★ ここを修正しました！リダイレクトを追跡する設定です ★
+                        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                        redirect: 'follow'
                     });
 
                     if (!response.ok) {
@@ -309,7 +309,6 @@
                     const result = await response.json();
 
                     if (result.status === 'success') {
-                        // 保存が成功したら、サーバーから最新のデータを再取得してUIを更新する
                         await loadData();
                         showFormMessage('データを　きろくしました！', false);
                     } else {
@@ -321,7 +320,6 @@
                     alert(`ほぞんエラー: ${e.message}\n\n開発者ツール（F12キー）のコンソールで詳細を確認してください。`);
                     showFormMessage('ほぞんに　しっぱいしました。', true);
                 } finally {
-                    // hideLoaderはloadData内で呼ばれるので不要
                     addWeightBtn.disabled = false;
                 }
             };
