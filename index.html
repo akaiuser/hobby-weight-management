@@ -375,7 +375,7 @@
                  <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-4">
                     <div class="flex-grow">
                         <label for="heightDisplay" class="block text-sm font-medium text-white mb-1">しんちょう (cm)</label>
-                        <div id="heightDisplay" class="input-field w-full text-center text-lg bg-gray-700 cursor-default">
+                        <div id="heightDisplay" class="input-field w-full text-center text-base bg-gray-700 cursor-default">
                             まだ　せっていされていません
                         </div>
                     </div>
@@ -386,7 +386,7 @@
         </div>
 
         <!-- PC/タブレット版：従来の順番 -->
-        <div class="hidden md:block">
+        <div class="hidden md:block space-y-6">
             <!-- PC版：身長設定とステータス表示エリア -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- 身長設定 -->
@@ -395,7 +395,7 @@
                      <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-4">
                         <div class="flex-grow">
                             <label for="heightDisplayPC" class="block text-sm font-medium text-white mb-1">しんちょう (cm)</label>
-                            <div id="heightDisplayPC" class="input-field w-full text-center text-lg bg-gray-700 cursor-default">
+                            <div id="heightDisplayPC" class="input-field w-full text-center text-base bg-gray-700 cursor-default">
                                 まだ　せっていされていません
                             </div>
                         </div>
@@ -701,9 +701,19 @@
                     const ctx = chartCanvas.getContext('2d');
                     ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
                     ctx.fillStyle = '#FFFFFF';
-                    ctx.font = '20px DotGothic16';
+                    ctx.font = '16px DotGothic16';
                     ctx.textAlign = 'center';
-                    ctx.fillText('このきかんには　データが　ありません', chartCanvas.width / 2, chartCanvas.height / 2);
+                    ctx.textBaseline = 'middle';
+                    
+                    // 複数行で表示
+                    const lines = ['このきかんには', 'データが　ありません'];
+                    const lineHeight = 24;
+                    const totalHeight = lines.length * lineHeight;
+                    const startY = (chartCanvas.height / 2) - (totalHeight / 2) + (lineHeight / 2);
+                    
+                    lines.forEach((line, index) => {
+                        ctx.fillText(line, chartCanvas.width / 2, startY + (index * lineHeight));
+                    });
                     return;
                 }
                 
@@ -995,8 +1005,8 @@
             const updateHeightDisplay = () => {
                 const displayText = userHeight > 0 ? `${userHeight.toFixed(1)} cm` : 'まだ　せっていされていません';
                 const className = userHeight > 0 ? 
-                    'input-field w-full text-center text-lg bg-gray-700 cursor-default' :
-                    'input-field w-full text-center text-lg bg-gray-700 cursor-default text-gray-400';
+                    'input-field w-full text-center text-base bg-gray-700 cursor-default' :
+                    'input-field w-full text-center text-base bg-gray-700 cursor-default text-gray-400';
                 
                 // スマホ版とPC版両方を更新
                 if (heightDisplay) {
