@@ -577,7 +577,7 @@
                 // データセットの準備
                 const datasets = [{
                     label: 'たいじゅう (kg)',
-                    data: sortedData.map(d => d.weight),
+                    data: sortedData.map(d => ({ x: d.date, y: d.weight })),
                     borderColor: '#FFD700',
                     backgroundColor: 'rgba(255, 215, 0, 0.2)',
                     fill: true,
@@ -591,13 +591,14 @@
                 if (standardWeight && userHeight > 0) {
                     datasets.push({
                         label: 'ひょうじゅんたいじゅう',
-                        data: Array(sortedData.length).fill(standardWeight),
+                        data: sortedData.map(d => ({ x: d.date, y: standardWeight })),
                         borderColor: '#FF6B6B',
                         backgroundColor: 'transparent',
                         borderDash: [5, 5],
                         fill: false,
                         pointRadius: 0,
-                        pointHoverRadius: 0
+                        pointHoverRadius: 0,
+                        tension: 0
                     });
                 }
 
