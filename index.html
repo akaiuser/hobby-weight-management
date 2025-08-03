@@ -42,26 +42,94 @@
         .dq-button {
             background-color: transparent;
             color: white;
-            padding: 0.5rem 1rem;
-            border: none;
+            padding: 0.75rem 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
             cursor: pointer;
             position: relative;
-            text-align: left;
+            text-align: center;
+            transition: all 0.2s ease;
+            display: inline-block;
+            min-height: 44px; /* スマホ向けタッチターゲット */
+            touch-action: manipulation; /* スマホでのダブルタップズーム防止 */
+            user-select: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .dq-button:hover::before, .dq-button:focus::before {
             content: '▶';
             color: #FFD700;
             position: absolute;
-            left: -0.5rem;
+            left: 0.5rem;
             top: 50%;
             transform: translateY(-50%);
+        }
+        .dq-button:hover {
+            background-color: rgba(255, 215, 0, 0.1);
+            border-color: #FFD700;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+            transform: translateY(-1px);
+        }
+        .dq-button:active {
+            transform: translateY(0px);
+            box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
         }
         .dq-button:disabled {
             color: #9E9E9E;
             cursor: not-allowed;
+            border-color: rgba(158, 158, 158, 0.3);
+            transform: none;
+            box-shadow: none;
         }
         .dq-button:disabled:hover::before {
             content: '';
+        }
+        .dq-button:disabled:hover {
+            background-color: transparent;
+            border-color: rgba(158, 158, 158, 0.3);
+            box-shadow: none;
+            transform: none;
+        }
+        
+        /* メインアクションボタンの特別スタイル */
+        .dq-button.primary {
+            background-color: rgba(255, 215, 0, 0.1);
+            border-color: #FFD700;
+            font-weight: bold;
+            padding: 0.75rem 1.5rem;
+            min-width: 120px;
+        }
+        .dq-button.primary:hover {
+            background-color: rgba(255, 215, 0, 0.2);
+            border-color: #FFD700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+        }
+        .dq-button.primary::after {
+            content: '✨';
+            margin-left: 0.25rem;
+            opacity: 0.7;
+            font-size: 0.9em;
+        }
+        .dq-button.primary:hover::after {
+            opacity: 1;
+        }
+        
+        /* スマホ向けレスポンシブ調整 */
+        @media (max-width: 768px) {
+            .dq-button {
+                padding: 1rem 1.25rem;
+                font-size: 1rem;
+                min-height: 48px;
+            }
+            .dq-button.primary {
+                padding: 1rem 1.5rem;
+                width: 100%;
+                margin-top: 0.5rem;
+            }
+            .dq-window {
+                padding: 1rem;
+            }
         }
 
         .input-field {
@@ -225,14 +293,14 @@
             <!-- 身長設定 -->
             <div class="dq-window">
                 <h2 class="text-xl font-semibold text-white mb-4">せってい</h2>
-                 <div class="flex items-end gap-4">
+                 <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-4">
                     <div class="flex-grow">
                         <label for="heightDisplay" class="block text-sm font-medium text-white mb-1">しんちょう (cm)</label>
                         <div id="heightDisplay" class="input-field w-full text-center text-lg bg-gray-700 cursor-default">
                             まだ　せっていされていません
                         </div>
                     </div>
-                    <button id="changeHeightBtn" class="dq-button h-12">▶ へんこう</button>
+                    <button id="changeHeightBtn" class="dq-button h-12 sm:w-auto w-full">へんこう</button>
                 </div>
                 <p id="heightMessage" class="text-yellow-300 text-sm mt-3 h-5"></p>
             </div>
@@ -250,7 +318,7 @@
         <!-- 体重入力フォーム -->
         <div class="dq-window">
             <h2 class="text-xl sm:text-2xl font-semibold text-white mb-4">きょうのたいじゅう</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                     <label for="weightDate" class="block text-sm font-medium text-white mb-1">ひづけ</label>
                     <input type="date" id="weightDate" class="input-field w-full">
@@ -259,7 +327,9 @@
                     <label for="weightInput" class="block text-sm font-medium text-white mb-1">たいじゅう (kg)</label>
                     <input type="number" id="weightInput" placeholder="60" step="0.1" class="input-field w-full">
                 </div>
-                <button id="addWeightBtn" class="dq-button h-12 text-lg">▶ きろくする</button>
+                <div class="sm:col-span-2 lg:col-span-1 flex items-end">
+                    <button id="addWeightBtn" class="dq-button primary w-full h-12 text-lg">きろくする</button>
+                </div>
             </div>
             <p id="formMessage" class="text-yellow-300 text-sm mt-3 h-5"></p>
         </div>
