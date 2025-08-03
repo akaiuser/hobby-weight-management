@@ -97,10 +97,10 @@ cd hobby-weight-management
 ```javascript
 // 体重データ (localStorage key: 'weightManagement_weightData')
 [
-  { "date": "2025-08-01", "weight": 65.5 },
-  { "date": "2025-08-02", "weight": 65.3 }
+  { "date": "2025-08-01", "weight": 60.5 },
+  { "date": "2025-08-02", "weight": 61.3 }
 ]
 
 // 身長データ (localStorage key: 'weightManagement_userHeight')
-163
+160
 ```
