@@ -307,34 +307,7 @@
             <h1 class="text-3xl sm:text-4xl font-bold text-white tracking-wider">たいじゅうのきろく</h1>
         </header>
 
-        <!-- ▼▼▼【変更点1】身長設定とステータス表示エリア ▼▼▼ -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- 身長設定 -->
-            <div class="dq-window">
-                <h2 class="text-xl font-semibold text-white mb-4">せってい</h2>
-                 <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-4">
-                    <div class="flex-grow">
-                        <label for="heightDisplay" class="block text-sm font-medium text-white mb-1">しんちょう (cm)</label>
-                        <div id="heightDisplay" class="input-field w-full text-center text-lg bg-gray-700 cursor-default">
-                            まだ　せっていされていません
-                        </div>
-                    </div>
-                    <button id="changeHeightBtn" class="dq-button h-12 sm:w-auto w-full">へんこう</button>
-                </div>
-                <p id="heightMessage" class="text-yellow-300 text-sm mt-3 h-5"></p>
-            </div>
-            <!-- ステータス表示 -->
-            <div class="dq-window">
-                <h2 class="text-xl font-semibold text-white mb-4">ステータス</h2>
-                <div id="statusDisplay" class="space-y-2 text-lg">
-                    <p>しんちょうを　せっていしてください。</p>
-                </div>
-            </div>
-        </div>
-        <!-- ▲▲▲【変更点1】ここまで ▲▲▲ -->
-
-
-        <!-- 体重入力フォーム -->
+        <!-- 1. きょうのたいじゅう（スマホ優先順位1位） -->
         <div class="dq-window">
             <h2 class="text-xl sm:text-2xl font-semibold text-white mb-4">きょうのたいじゅう</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -353,7 +326,7 @@
             <p id="formMessage" class="text-yellow-300 text-sm mt-3 h-5"></p>
         </div>
 
-        <!-- グラフ表示エリア -->
+        <!-- 2. 体重の推移（折れ線グラフ）（スマホ優先順位2位） -->
         <div class="dq-window">
             <!-- 期間選択ボタン -->
             <div class="flex flex-wrap gap-2 mb-4">
@@ -366,23 +339,97 @@
             <canvas id="weightChart"></canvas>
         </div>
 
-        <!-- 記録一覧テーブル -->
-        <div class="dq-window">
-            <h3 class="text-lg font-semibold mb-4 text-white text-center">いままでのきろく</h3>
-            <div class="max-h-96 overflow-y-auto">
-                <table class="w-full text-sm text-center dq-table">
-                    <thead>
-                        <tr>
-                            <th class="p-2">ひづけ</th>
-                            <th class="p-2">たいじゅう (kg)</th>
-                            <th class="p-2">そうさ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyTableBody">
-                        <!-- ここに記録が動的に追加される -->
-                        <tr><td colspan="3" class="text-center p-8">まだ　きろくが　ありません。</td></tr>
-                    </tbody>
-                </table>
+        <!-- スマホとPC/タブレットで異なる順番 -->
+        <div class="md:hidden space-y-6">
+            <!-- スマホ版：3. ステータス（スマホ優先順位3位） -->
+            <div class="dq-window">
+                <h2 class="text-xl font-semibold text-white mb-4">ステータス</h2>
+                <div id="statusDisplay" class="space-y-2 text-lg">
+                    <p>しんちょうを　せっていしてください。</p>
+                </div>
+            </div>
+
+            <!-- スマホ版：4. いままでのきろく（スマホ優先順位4位） -->
+            <div class="dq-window">
+                <h3 class="text-lg font-semibold mb-4 text-white text-center">いままでのきろく</h3>
+                <div class="max-h-96 overflow-y-auto">
+                    <table class="w-full text-sm text-center dq-table">
+                        <thead>
+                            <tr>
+                                <th class="p-2">ひづけ</th>
+                                <th class="p-2">たいじゅう (kg)</th>
+                                <th class="p-2">そうさ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                            <!-- ここに記録が動的に追加される -->
+                            <tr><td colspan="3" class="text-center p-8">まだ　きろくが　ありません。</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- スマホ版：5. しんちょうのせってい（スマホ優先順位5位） -->
+            <div class="dq-window">
+                <h2 class="text-xl font-semibold text-white mb-4">せってい</h2>
+                 <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-4">
+                    <div class="flex-grow">
+                        <label for="heightDisplay" class="block text-sm font-medium text-white mb-1">しんちょう (cm)</label>
+                        <div id="heightDisplay" class="input-field w-full text-center text-lg bg-gray-700 cursor-default">
+                            まだ　せっていされていません
+                        </div>
+                    </div>
+                    <button id="changeHeightBtn" class="dq-button h-12 sm:w-auto w-full">へんこう</button>
+                </div>
+                <p id="heightMessage" class="text-yellow-300 text-sm mt-3 h-5"></p>
+            </div>
+        </div>
+
+        <!-- PC/タブレット版：従来の順番 -->
+        <div class="hidden md:block">
+            <!-- PC版：身長設定とステータス表示エリア -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 身長設定 -->
+                <div class="dq-window">
+                    <h2 class="text-xl font-semibold text-white mb-4">せってい</h2>
+                     <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-4">
+                        <div class="flex-grow">
+                            <label for="heightDisplayPC" class="block text-sm font-medium text-white mb-1">しんちょう (cm)</label>
+                            <div id="heightDisplayPC" class="input-field w-full text-center text-lg bg-gray-700 cursor-default">
+                                まだ　せっていされていません
+                            </div>
+                        </div>
+                        <button id="changeHeightBtnPC" class="dq-button h-12 sm:w-auto w-full">へんこう</button>
+                    </div>
+                    <p id="heightMessagePC" class="text-yellow-300 text-sm mt-3 h-5"></p>
+                </div>
+                <!-- ステータス表示 -->
+                <div class="dq-window">
+                    <h2 class="text-xl font-semibold text-white mb-4">ステータス</h2>
+                    <div id="statusDisplayPC" class="space-y-2 text-lg">
+                        <p>しんちょうを　せっていしてください。</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PC版：記録一覧テーブル -->
+            <div class="dq-window">
+                <h3 class="text-lg font-semibold mb-4 text-white text-center">いままでのきろく</h3>
+                <div class="max-h-96 overflow-y-auto">
+                    <table class="w-full text-sm text-center dq-table">
+                        <thead>
+                            <tr>
+                                <th class="p-2">ひづけ</th>
+                                <th class="p-2">たいじゅう (kg)</th>
+                                <th class="p-2">そうさ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBodyPC">
+                            <!-- ここに記録が動的に追加される -->
+                            <tr><td colspan="3" class="text-center p-8">まだ　きろくが　ありません。</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -398,6 +445,7 @@
             const weightInputEl = document.getElementById('weightInput');
             const addWeightBtn = document.getElementById('addWeightBtn');
             const historyTableBody = document.getElementById('historyTableBody');
+            const historyTableBodyPC = document.getElementById('historyTableBodyPC');
             const chartCanvas = document.getElementById('weightChart');
             const formMessage = document.getElementById('formMessage');
             const loadingOverlay = document.getElementById('loadingOverlay');
@@ -408,6 +456,12 @@
             const changeHeightBtn = document.getElementById('changeHeightBtn');
             const heightMessage = document.getElementById('heightMessage');
             const statusDisplay = document.getElementById('statusDisplay');
+            
+            // PC版の要素も取得
+            const heightDisplayPC = document.getElementById('heightDisplayPC');
+            const changeHeightBtnPC = document.getElementById('changeHeightBtnPC');
+            const heightMessagePC = document.getElementById('heightMessagePC');
+            const statusDisplayPC = document.getElementById('statusDisplayPC');
             
             // 身長変更ダイアログ関連のDOM要素
             const heightChangeDialog = document.getElementById('heightChangeDialog');
@@ -442,9 +496,22 @@
             };
             // ▼▼▼【変更点3】身長設定用のメッセージ表示関数を追加 ▼▼▼
             const showHeightMessage = (message, isError = false) => {
-                heightMessage.textContent = message;
-                heightMessage.style.color = isError ? '#ff7f7f' : '#FFD700';
-                setTimeout(() => heightMessage.textContent = '', 3000);
+                const color = isError ? '#ff7f7f' : '#FFD700';
+                
+                // スマホ版とPC版両方にメッセージを表示
+                if (heightMessage) {
+                    heightMessage.textContent = message;
+                    heightMessage.style.color = color;
+                }
+                if (heightMessagePC) {
+                    heightMessagePC.textContent = message;
+                    heightMessagePC.style.color = color;
+                }
+                
+                setTimeout(() => {
+                    if (heightMessage) heightMessage.textContent = '';
+                    if (heightMessagePC) heightMessagePC.textContent = '';
+                }, 3000);
             };
             // ▲▲▲【変更点3】ここまで ▲▲▲
 
@@ -556,15 +623,21 @@
 
             // ▼▼▼【変更点4】ステータス表示を更新する関数を追加 ▼▼▼
             const updateStatusDisplay = () => {
+                const statusContent = getStatusContent();
+                
+                // スマホ版とPC版両方を更新
+                if (statusDisplay) statusDisplay.innerHTML = statusContent;
+                if (statusDisplayPC) statusDisplayPC.innerHTML = statusContent;
+            };
+            
+            const getStatusContent = () => {
                 if (!userHeight || userHeight <= 0) {
-                    statusDisplay.innerHTML = '<p>しんちょうを　せっていしてください。</p>';
-                    return;
+                    return '<p>しんちょうを　せっていしてください。</p>';
                 }
                 
                 const latestData = [...weightData].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
                 if (!latestData) {
-                    statusDisplay.innerHTML = '<p>たいじゅうを　きろくしてください。</p>';
-                    return;
+                    return '<p>たいじゅうを　きろくしてください。</p>';
                 }
 
                 const heightInMeters = userHeight / 100;
@@ -577,7 +650,7 @@
                 const diffSign = diff >= 0 ? '+' : '';
                 const diffColor = diff > 0 ? 'text-red-400' : 'text-green-400';
 
-                statusDisplay.innerHTML = `
+                return `
                     <p>BMI: ${bmi.toFixed(2)}</p>
                     <p>ひょうじゅんたいじゅう: ${standardWeight.toFixed(1)} kg</p>
                     <p>さぶん: <span class="${diffColor}">${diffSign}${diff.toFixed(1)} kg</span></p>
@@ -748,27 +821,14 @@
             };
 
             const renderTable = () => {
-                historyTableBody.innerHTML = '';
-                if (weightData.length === 0) {
-                    historyTableBody.innerHTML = '<tr><td colspan="3" class="text-center p-8">まだ　きろくが　ありません。</td></tr>';
-                    return;
-                }
-
-                const sortedData = [...weightData].sort((a, b) => new Date(b.date) - new Date(a.date));
-                sortedData.forEach(record => {
-                    const row = document.createElement('tr');
-                    row.className = 'border-b border-white hover:bg-blue-900';
-                    row.innerHTML = `
-                        <td class="p-2">${record.date}</td>
-                        <td class="p-2">${Number(record.weight).toFixed(1)} kg</td>
-                        <td class="p-2">
-                            <button class="dq-button text-red-400" data-date="${record.date}">けす</button>
-                        </td>
-                    `;
-                    historyTableBody.appendChild(row);
-                });
-
-                document.querySelectorAll('#historyTableBody button').forEach(btn => {
+                const tableContent = getTableContent();
+                
+                // スマホ版とPC版両方を更新
+                if (historyTableBody) historyTableBody.innerHTML = tableContent;
+                if (historyTableBodyPC) historyTableBodyPC.innerHTML = tableContent;
+                
+                // イベントリスナーを両方に設定
+                document.querySelectorAll('#historyTableBody button, #historyTableBodyPC button').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -778,6 +838,23 @@
                         }
                     });
                 });
+            };
+            
+            const getTableContent = () => {
+                if (weightData.length === 0) {
+                    return '<tr><td colspan="3" class="text-center p-8">まだ　きろくが　ありません。</td></tr>';
+                }
+
+                const sortedData = [...weightData].sort((a, b) => new Date(b.date) - new Date(a.date));
+                return sortedData.map(record => `
+                    <tr class="border-b border-white hover:bg-blue-900">
+                        <td class="p-2">${record.date}</td>
+                        <td class="p-2">${Number(record.weight).toFixed(1)} kg</td>
+                        <td class="p-2">
+                            <button class="dq-button text-red-400" data-date="${record.date}">けす</button>
+                        </td>
+                    </tr>
+                `).join('');
             };
 
             // --- 4. データ操作 (CRUD) - ローカルストレージ版 ---
@@ -916,12 +993,19 @@
 
             // 身長表示を更新
             const updateHeightDisplay = () => {
-                if (userHeight > 0) {
-                    heightDisplay.textContent = `${userHeight.toFixed(1)} cm`;
-                    heightDisplay.className = 'input-field w-full text-center text-lg bg-gray-700 cursor-default';
-                } else {
-                    heightDisplay.textContent = 'まだ　せっていされていません';
-                    heightDisplay.className = 'input-field w-full text-center text-lg bg-gray-700 cursor-default text-gray-400';
+                const displayText = userHeight > 0 ? `${userHeight.toFixed(1)} cm` : 'まだ　せっていされていません';
+                const className = userHeight > 0 ? 
+                    'input-field w-full text-center text-lg bg-gray-700 cursor-default' :
+                    'input-field w-full text-center text-lg bg-gray-700 cursor-default text-gray-400';
+                
+                // スマホ版とPC版両方を更新
+                if (heightDisplay) {
+                    heightDisplay.textContent = displayText;
+                    heightDisplay.className = className;
+                }
+                if (heightDisplayPC) {
+                    heightDisplayPC.textContent = displayText;
+                    heightDisplayPC.className = className;
                 }
             };
 
@@ -976,7 +1060,8 @@
 
                 // 身長関連の処理
                 loadHeight();
-                changeHeightBtn.addEventListener('click', handleHeightChange);
+                if (changeHeightBtn) changeHeightBtn.addEventListener('click', handleHeightChange);
+                if (changeHeightBtnPC) changeHeightBtnPC.addEventListener('click', handleHeightChange);
 
                 // 期間選択ボタンのイベントリスナー
                 document.querySelectorAll('.period-btn').forEach(btn => {
